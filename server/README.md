@@ -61,9 +61,24 @@ Pronto: abra `https://discordbot-transmissao.<seu-subdominio>.workers.dev/transm
 
 ## 3. Testar uma transmissão
 
-1. Abra `/transmitir`, digite a chave e um título e clique em **Escolher o que transmitir**.
+1. Abra `/transmitir`, digite a chave e um título, escolha a **qualidade** e clique em **Escolher o que transmitir**.
 2. Escolha uma **aba** com som (um vídeo do YouTube, por exemplo). Pelo navegador, compartilhar a tela inteira com som também pega a voz da call do Discord; o app do Windows resolve isso capturando só o jogo.
 3. Copie o link e abra em outro aparelho (ou mande para um amigo). Clique em **▶ Assistir**.
+
+Na página de assistir, use **⛶ Tela cheia** (ou duplo clique, ou a tecla F) e **🗗 Janela flutuante** (ou a tecla P). A janela flutuante fica por cima de tudo e dá para mover e redimensionar. Para ver na TV, use o **Transmitir…** do próprio Chrome (menu ⋮).
+
+### Qualidades
+
+O teto é Full HD. Quem transmite escolhe a qualidade, e a trava de uso conta cada espectador pela qualidade da sala:
+
+| Qualidade | Vídeo até | Cada espectador gasta até | 900 GB rendem |
+|---|---|---|---|
+| 1080p · 60 fps | 6 Mbps | ~2,9 GB/h | ~310 horas-espectador |
+| 1080p · 30 fps | 4 Mbps | ~1,9 GB/h | ~460 h |
+| **720p · 60 fps** (padrão) | 3,5 Mbps | ~1,7 GB/h | ~530 h |
+| 720p · 30 fps | 2,5 Mbps | ~1,2 GB/h | ~720 h |
+
+Mais qualidade também pede mais upload da internet de quem transmite (o vídeo sai uma vez só, para a Cloudflare).
 
 ## Rodar no seu PC (desenvolvimento)
 
@@ -95,7 +110,7 @@ Usada pela página de transmitir e, na parte 2c, pelo app do Windows.
 
 | Método e rota | Quem | O que faz |
 |---|---|---|
-| `POST /api/salas` | Chave de transmissão | Cria a sala. Devolve `sala`, `link` e o `token` do transmissor |
+| `POST /api/salas` | Chave de transmissão | Cria a sala (`titulo` e `qualidade`: `1080p60`, `1080p30`, `720p60` ou `720p30`). Devolve `sala`, `link` e o `token` do transmissor |
 | `GET /api/uso` | Chave de transmissão | Uso estimado dos últimos 31 dias e o limite, em bytes |
 | `GET /api/salas/:sala` | Senha para assistir | Título, estado (`aguardando`, `ao-vivo`, `encerrada`) e número da publicação |
 | `POST /api/salas/:sala/publicar` | Token | Recebe a oferta WebRTC e as faixas; devolve a resposta do SFU |
@@ -113,12 +128,12 @@ O Cloudflare Realtime tem **1.000 GB grátis por mês** (SFU + TURN somados) e c
 
 A trava de uso mantém o servidor dentro da cota grátis:
 
-- A página de assistir avisa o servidor a cada 15 segundos que continua assistindo. O servidor conta esse tempo como se cada espectador recebesse **6,5 Mbps**, o máximo da transmissão. É uma estimativa de pior caso: o uso real fica abaixo.
+- A página de assistir avisa o servidor a cada 15 segundos que continua assistindo. O servidor conta esse tempo como se o espectador recebesse o **teto da qualidade da sala** (vídeo + som + cabeçalhos; veja a tabela de qualidades). É uma estimativa de pior caso: o uso real fica abaixo.
 - Ele soma os **últimos 31 dias**, porque o mês de cobrança pode não começar no dia 1.
 - Ao chegar em **900 GB** (`LIMITE_GB_MES` no `wrangler.jsonc`, que nunca passa de 1.000), ele encerra quem está assistindo e recusa novas salas, novas publicações e novos espectadores. Quando o uso dos últimos 31 dias baixar, tudo volta sozinho.
 - A página de transmitir mostra o uso estimado.
 
-Pela estimativa da trava (6,5 Mbps), 900 GB dão umas 300 horas-espectador nos 31 dias. Por exemplo, 4 amigos assistindo 3 horas por dia, todo fim de semana, gastam por volta de 300 GB.
+Por exemplo, 4 amigos assistindo 3 horas por dia, todo fim de semana, gastam por volta de 180 GB em 720p · 60 fps, ou 300 GB em 1080p · 60 fps.
 
 A contagem depende da página de assistir do próprio servidor. Uma página modificada de propósito poderia não avisar, e por isso a senha para assistir também protege a cota.
 
@@ -131,5 +146,7 @@ A contagem depende da página de assistir do próprio servidor. Uma página modi
 | `src/salas.ts` | Regras das salas, IDs, tokens |
 | `src/sfu.ts` | Cliente da API do Realtime SFU |
 | `src/uso.ts` | Trava de uso: estimativa por presença e soma dos últimos 31 dias |
+| `public/js/qualidade.js` | Qualidades de transmissão, usadas pela página e pelo servidor |
+| `public/js/tela.js` | Tela cheia e janela flutuante da página de assistir |
 | `public/` | Páginas de assistir e de transmitir |
 | `test/` | Testes (Vitest) |
