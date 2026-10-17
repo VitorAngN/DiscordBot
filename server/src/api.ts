@@ -15,6 +15,7 @@ import {
   type RepositorioDeSalas,
 } from './salas';
 import { ErroSfu, type ClienteSfu, type DescricaoDeSessao, type FaixaLocal } from './sfu';
+import { JANELA_DIAS, type MedidorDeUso } from './uso';
 
 export interface Dependencias {
   salas: RepositorioDeSalas;
@@ -22,8 +23,16 @@ export interface Dependencias {
   sfu: ClienteSfu | null;
   /** Senha para criar salas; vazia quando ainda não foi configurada. */
   chaveDeTransmissao: string;
+  /** Senha para assistir; vazia deixa assistir só com o link. */
+  chaveDeAssistir: string;
+  uso: MedidorDeUso;
+  /** Acima disso (em bytes nos últimos 31 dias), ninguém transmite nem assiste. */
+  limiteDeUso: number;
   agora?: () => number;
 }
+
+const MENSAGEM_LIMITE =
+  'O limite grátis de transmissão foi atingido. Ela volta sozinha quando o uso dos últimos 31 dias baixar.';
 
 const ID_DE_SALA = /^[0-9A-Za-z]{10}$/;
 const ID_DE_SESSAO = /^[0-9A-Za-z_-]{1,128}$/;
@@ -62,6 +71,10 @@ export async function tratarApi(req: Request, deps: Dependencias): Promise<Respo
 async function rotear(req: Request, deps: Dependencias): Promise<Response> {
   const url = new URL(req.url);
   const [api, recurso, id, acao, sessao, subacao, ...resto] = url.pathname.split('/').filter(Boolean);
+  if (api === 'api' && recurso === 'uso' && !id) {
+    if (req.method !== 'GET') throw new ErroHttp(405, 'Use GET para consultar o uso.');
+    return consultarUso(req, deps);
+  }
   if (api !== 'api' || recurso !== 'salas' || resto.length > 0) throw new ErroHttp(404, 'Rota não encontrada.');
 
   if (!id) {
@@ -77,6 +90,7 @@ async function rotear(req: Request, deps: Dependencias): Promise<Response> {
   const rota = `${req.method} ${[acao, sessao && ':sessao', subacao].filter(Boolean).join('/')}`;
   switch (rota) {
     case 'GET ':
+      await exigirEspectador(req, deps);
       return json(resumoPublico(sala));
     case 'DELETE ':
       return encerrarSala(ctx);
@@ -88,6 +102,8 @@ async function rotear(req: Request, deps: Dependencias): Promise<Response> {
       return assistir(ctx);
     case 'POST assistir/:sessao/resposta':
       return responder(ctx, sessao!);
+    case 'POST assistir/:sessao/presenca':
+      return registrarPresenca(ctx, sessao!);
     default:
       throw new ErroHttp(404, 'Rota não encontrada.');
   }
@@ -101,11 +117,8 @@ interface Contexto {
 }
 
 async function criarSala(req: Request, deps: Dependencias, origem: string): Promise<Response> {
-  if (!deps.chaveDeTransmissao) throw new ErroHttp(503, 'O servidor ainda não tem a chave de transmissão configurada.');
-  const chave = tokenDe(req);
-  if (!chave || !(await segredosIguais(chave, deps.chaveDeTransmissao))) {
-    throw new ErroHttp(401, 'Chave de transmissão inválida.');
-  }
+  await exigirChaveDeTransmissao(req, deps);
+  await exigirCota(deps);
 
   const corpo = await lerJson<{ titulo?: unknown }>(req, true);
   const titulo = typeof corpo?.titulo === 'string' && corpo.titulo.trim() ? corpo.titulo.trim().slice(0, MAX_TITULO) : TITULO_PADRAO;
@@ -121,6 +134,7 @@ async function criarSala(req: Request, deps: Dependencias, origem: string): Prom
 async function publicar({ req, deps, id, sala }: Contexto): Promise<Response> {
   await exigirTransmissor(req, sala);
   if (sala.estado === 'encerrada') throw new ErroHttp(410, 'Esta sala já foi encerrada.');
+  await exigirCota(deps);
   const sfu = exigirSfu(deps);
 
   const corpo = await lerJson<{ sessionDescription?: unknown; tracks?: unknown }>(req);
@@ -143,22 +157,49 @@ async function confirmarAoVivo({ req, deps, id, sala }: Contexto): Promise<Respo
   return semConteudo();
 }
 
-async function assistir({ deps, sala }: Contexto): Promise<Response> {
+async function assistir({ req, deps, sala }: Contexto): Promise<Response> {
+  await exigirEspectador(req, deps);
   if (sala.estado === 'encerrada') throw new ErroHttp(410, 'A transmissão terminou.');
   if (sala.estado !== 'ao-vivo' || !sala.publicacao) throw new ErroHttp(409, 'A transmissão ainda não começou.');
+  await exigirCota(deps);
   const sfu = exigirSfu(deps);
 
   const sessionId = await sfu.novaSessao();
   const { oferta, faixas } = await sfu.assinar(sessionId, sala.publicacao.sessionId, sala.publicacao.faixas);
+  await deps.uso.iniciar(sessionId);
   return json({ sessionId, sessionDescription: oferta, faixas, publicacao: sala.publicacao.numero });
 }
 
 async function responder({ req, deps }: Contexto, sessao: string): Promise<Response> {
+  await exigirEspectador(req, deps);
   if (!ID_DE_SESSAO.test(sessao)) throw new ErroHttp(400, 'Sessão inválida.');
   const sfu = exigirSfu(deps);
   const corpo = await lerJson<{ sessionDescription?: unknown }>(req);
   await sfu.renegociar(sessao, lerDescricao(corpo?.sessionDescription, 'answer'));
   return semConteudo();
+}
+
+/**
+ * Quem assiste avisa periodicamente que continua conectado; é isso que alimenta a trava de uso.
+ * A resposta diz se pode continuar e, se não, por quê.
+ */
+async function registrarPresenca({ req, deps, sala }: Contexto, sessao: string): Promise<Response> {
+  await exigirEspectador(req, deps);
+  if (!ID_DE_SESSAO.test(sessao)) throw new ErroHttp(400, 'Sessão inválida.');
+  const total = await deps.uso.presenca(sessao);
+
+  let motivo: 'encerrada' | 'limite' | 'aguardando' | null = null;
+  if (sala.estado === 'encerrada') motivo = 'encerrada';
+  else if (total >= deps.limiteDeUso) motivo = 'limite';
+  else if (sala.estado !== 'ao-vivo') motivo = 'aguardando';
+
+  return json({ continuar: motivo === null, motivo, publicacao: resumoPublico(sala).publicacao });
+}
+
+async function consultarUso(req: Request, deps: Dependencias): Promise<Response> {
+  await exigirChaveDeTransmissao(req, deps);
+  const usado = await deps.uso.total();
+  return json({ usado, limite: deps.limiteDeUso, janelaDias: JANELA_DIAS, atingido: usado >= deps.limiteDeUso });
 }
 
 async function encerrarSala({ req, deps, id, sala }: Contexto): Promise<Response> {
@@ -172,6 +213,27 @@ async function encerrarSala({ req, deps, id, sala }: Contexto): Promise<Response
 function tokenDe(req: Request): string | null {
   const cabecalho = req.headers.get('Authorization') ?? '';
   return cabecalho.startsWith('Bearer ') ? cabecalho.slice(7).trim() || null : null;
+}
+
+async function exigirChaveDeTransmissao(req: Request, deps: Dependencias) {
+  if (!deps.chaveDeTransmissao) throw new ErroHttp(503, 'O servidor ainda não tem a chave de transmissão configurada.');
+  const chave = tokenDe(req);
+  if (!chave || !(await segredosIguais(chave, deps.chaveDeTransmissao))) {
+    throw new ErroHttp(401, 'Chave de transmissão inválida.');
+  }
+}
+
+/** Com a senha de assistir configurada, só quem a tem vê a sala. */
+async function exigirEspectador(req: Request, deps: Dependencias) {
+  if (!deps.chaveDeAssistir) return;
+  const senha = tokenDe(req);
+  if (!senha || !(await segredosIguais(senha, deps.chaveDeAssistir))) {
+    throw new ErroHttp(401, 'Senha para assistir inválida.');
+  }
+}
+
+async function exigirCota(deps: Dependencias) {
+  if ((await deps.uso.total()) >= deps.limiteDeUso) throw new ErroHttp(429, MENSAGEM_LIMITE);
 }
 
 async function exigirTransmissor(req: Request, sala: DadosDaSala) {

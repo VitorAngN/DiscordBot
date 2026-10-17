@@ -7,3 +7,6 @@ REALTIME_APP_SECRET=
 
 # Senha que você escolhe; quem for transmitir precisa dela para criar salas
 TRANSMISSAO_CHAVE=
+
+# Senha para assistir (recomendado): sem ela, qualquer pessoa com o link assiste
+ASSISTIR_CHAVE=
