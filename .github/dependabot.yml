@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /bot
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: build(bot)
+    groups:
+      discord:
+        patterns: ["discord.js", "@discordjs/*", "@snazzah/davey"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
