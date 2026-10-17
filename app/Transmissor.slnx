@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Transmissor.App/Transmissor.App.csproj" />
     <Project Path="src/Transmissor.Audio.Cli/Transmissor.Audio.Cli.csproj" />
     <Project Path="src/Transmissor.Audio/Transmissor.Audio.csproj" />
   </Folder>

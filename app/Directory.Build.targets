@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    O pacote do WebView2 referencia também a versão para WPF, que o app (WinForms) não usa.
+    Ela puxa outra versão do WindowsBase e gera o aviso MSB3277; tirar a referência resolve.
+  -->
+  <Target Name="RemoverWebView2DoWpf" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+</Project>
