@@ -86,6 +86,29 @@ public static unsafe class Processos
     /// </summary>
     public static uint? ProcessoPrincipalDoDiscord() => ProcessoRaiz(ListarProcessos(), ExecutaveisDoDiscord);
 
+    /// <summary>
+    /// O processo e todos os descendentes dele: é o que o Windows inclui ou exclui
+    /// na captura por processo ("árvore do processo").
+    /// </summary>
+    public static HashSet<uint> Arvore(IReadOnlyList<InfoDeProcesso> processos, uint raiz)
+    {
+        var filhos = processos.Where(p => p.Id != p.PaiId).ToLookup(p => p.PaiId, p => p.Id);
+        var arvore = new HashSet<uint> { raiz };
+        var pendentes = new Queue<uint>([raiz]);
+        while (pendentes.TryDequeue(out var atual))
+        {
+            foreach (var filho in filhos[atual])
+            {
+                if (arvore.Add(filho)) pendentes.Enqueue(filho);
+            }
+        }
+        return arvore;
+    }
+
+    /// <summary>O processo é um dos executáveis do Discord (app normal, PTB ou Canary).</summary>
+    public static bool EhDoDiscord(uint pid) =>
+        ListarProcessos().Any(p => p.Id == pid && ExecutaveisDoDiscord.Contains(p.Nome, StringComparer.OrdinalIgnoreCase));
+
     /// <summary>Primeiro processo com um dos nomes cujo pai não tem um desses nomes.</summary>
     internal static uint? ProcessoRaiz(IReadOnlyList<InfoDeProcesso> processos, IReadOnlyCollection<string> nomes)
     {

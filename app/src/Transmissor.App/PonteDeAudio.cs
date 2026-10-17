@@ -63,22 +63,26 @@ internal sealed class PonteDeAudio(Control dono, CoreWebView2 webview)
 
     (uint Pid, ModoDeCaptura Modo, string Descricao) ResolverOrigem(string? rotulo, string? modo)
     {
-        var janela = Processos.JanelaDoRotulo(rotulo);
-        // Tela inteira não tem um programa só: pega tudo, menos o Discord
-        var telaInteira = rotulo?.StartsWith("screen:", StringComparison.Ordinal) == true;
+        // Regra principal: o Discord nunca entra. Qualquer modo que não seja "só o programa" vira "tudo menos o Discord"
+        if (modo != "jogo") return TudoMenosDiscord();
 
-        if (modo == "sem-discord" || (telaInteira && janela is null))
-        {
-            return Processos.ProcessoPrincipalDoDiscord() is { } discord
-                ? (discord, ModoDeCaptura.TudoMenosOProcesso, "todo o PC, menos o Discord")
-                : ((uint)Environment.ProcessId, ModoDeCaptura.TudoMenosOProcesso, "todo o PC (o Discord não está aberto)");
-        }
+        var janela = Processos.JanelaDoRotulo(rotulo);
+        // Tela inteira não tem um programa só
+        if (janela is null && rotulo?.StartsWith("screen:", StringComparison.Ordinal) == true) return TudoMenosDiscord();
 
         var pid = janela is { } j ? Processos.ProcessoDaJanela(j) : null;
         pid ??= Dialogos.EscolherPrograma(dono) ?? throw new OperationCanceledException();
+        // Escolheram a janela do próprio Discord: pegar o som dele traria a call junto
+        if (Processos.EhDoDiscord(pid.Value)) return TudoMenosDiscord();
+
         var nome = Processos.ListarProcessos().FirstOrDefault(p => p.Id == pid).Nome;
         return (pid.Value, ModoDeCaptura.SoDoProcesso, string.IsNullOrEmpty(nome) ? $"processo {pid}" : nome);
     }
+
+    static (uint, ModoDeCaptura, string) TudoMenosDiscord() =>
+        Processos.ProcessoPrincipalDoDiscord() is { } discord
+            ? (discord, ModoDeCaptura.TudoMenosOProcesso, "todo o PC, menos o Discord")
+            : ((uint)Environment.ProcessId, ModoDeCaptura.TudoMenosOProcesso, "todo o PC (o Discord não está aberto)");
 
     /// <summary>Chega da captura, fora da interface. Junta em blocos e manda para a página.</summary>
     void AoReceber(ReadOnlySpan<byte> pcm)

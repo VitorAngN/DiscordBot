@@ -36,13 +36,13 @@
         <label id="campoSom" hidden>
           Som
           <select id="modoSom">
-            <option value="jogo">Só o programa da janela escolhida (recomendado)</option>
-            <option value="sem-discord">Todo o som do PC, menos o Discord</option>
+            <option value="sem-discord">Todo o som do PC, menos o Discord (recomendado)</option>
+            <option value="jogo">Só o som do programa da janela escolhida</option>
           </select>
         </label>
         <p class="suave" id="dicaNavegador">
-          No navegador, compartilhe uma <strong>aba</strong> com o som ligado (ex.: um vídeo do YouTube). Se compartilhar a
-          tela inteira com som, a voz da call do Discord também entra.
+          Pelo navegador, só entra o som de uma <strong>aba</strong> (ex.: um vídeo do YouTube); o som do PC fica de fora,
+          para a call do Discord nunca entrar. Para transmitir um <strong>jogo</strong> com som, use o app do Windows.
         </p>
         <button type="submit" id="iniciar">Escolher o que transmitir</button>
       </form>
@@ -59,8 +59,8 @@
           <label class="opcao" id="campoSomAoVivo" hidden>
             Som:
             <select id="modoSomAoVivo">
-              <option value="jogo">Só o programa da janela</option>
               <option value="sem-discord">Tudo menos o Discord</option>
+              <option value="jogo">Só o programa da janela</option>
             </select>
           </label>
         </div>
