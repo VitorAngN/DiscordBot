@@ -1,0 +1,25 @@
+{
+  "name": "discordbot-motor",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Motor do bot do Discord: entra na call e toca mídia.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "verificar": "node scripts/verificar.js",
+    "som-teste": "node scripts/gerar-som-teste.js"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.19.2",
+    "@noble/ciphers": "^2.4.0",
+    "discord.js": "^14.27.0",
+    "ffmpeg-static": "^5.3.0",
+    "opusscript": "^0.1.1"
+  }
+}
