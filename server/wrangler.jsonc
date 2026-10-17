@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "discordbot-transmissao",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // Páginas estáticas; a API e os links de sala passam primeiro pelo Worker
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/s/*"]
+  },
+  // Uma instância por sala (o plano grátis só aceita Durable Objects com SQLite)
+  "durable_objects": {
+    "bindings": [{ "name": "SALAS", "class_name": "Sala" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Sala"] }],
+  "observability": { "enabled": true }
+  // Segredos (wrangler secret put / .dev.vars): REALTIME_APP_ID, REALTIME_APP_SECRET, TRANSMISSAO_CHAVE
+}

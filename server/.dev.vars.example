@@ -1,0 +1,9 @@
+# Copie para .dev.vars (ignorado pelo git) para rodar localmente com "npm run dev".
+# Em produção, cada valor vira um segredo: npx wrangler secret put NOME
+
+# Dashboard da Cloudflare → Realtime → Serverless SFU → sua app
+REALTIME_APP_ID=
+REALTIME_APP_SECRET=
+
+# Senha que você escolhe; quem for transmitir precisa dela para criar salas
+TRANSMISSAO_CHAVE=
