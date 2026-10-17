@@ -5,7 +5,7 @@ Programa que vai capturar a janela e o som do jogo e transmitir para os amigos. 
 | Parte | Estado |
 |---|---|
 | **2a. Som do jogo:** captura do som de um programa, sem o Discord | ✅ Pronto |
-| 2b. Servidor de transmissão (Cloudflare) | Planejado |
+| 2b. Servidor de transmissão (Cloudflare), em [`server/`](../server/README.md) | ✅ Pronto |
 | 2c. Vídeo da janela + envio por WebRTC | Planejado |
 
 ## Requisitos

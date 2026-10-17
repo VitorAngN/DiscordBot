@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transmitir pelo navegador</title>
+    <meta name="robots" content="noindex" />
+    <link rel="stylesheet" href="/css/estilo.css" />
+    <script type="module" src="/js/transmitir.js"></script>
+  </head>
+  <body>
+    <main>
+      <div class="cabecalho">
+        <div>
+          <h1>Transmitir pelo navegador</h1>
+          <p class="suave">Página de teste do servidor. O app do Windows vai fazer isso capturando só o som do jogo.</p>
+        </div>
+        <span class="selo" id="selo" data-estado="parado">Parado</span>
+      </div>
+
+      <form class="cartao" id="formulario">
+        <label>
+          Chave de transmissão
+          <input type="password" id="chave" autocomplete="current-password" required />
+        </label>
+        <label class="opcao"><input type="checkbox" id="lembrar" /> Lembrar a chave neste navegador</label>
+        <label>
+          Título
+          <input type="text" id="titulo" maxlength="100" placeholder="Ex.: Minecraft com a galera" />
+        </label>
+        <p class="suave">
+          No navegador, compartilhe uma <strong>aba</strong> com o som ligado (ex.: um vídeo do YouTube). Se compartilhar a
+          tela inteira com som, a voz da call do Discord também entra.
+        </p>
+        <button type="submit" id="iniciar">Escolher o que transmitir</button>
+      </form>
+
+      <section class="cartao" id="aoVivo" hidden>
+        <p><strong>Link para os amigos assistirem:</strong></p>
+        <div class="linha">
+          <span class="link" id="link"></span>
+          <button type="button" id="copiar">Copiar</button>
+          <button type="button" class="perigo" id="parar">Encerrar transmissão</button>
+        </div>
+      </section>
+
+      <p class="status" id="status" role="status"></p>
+
+      <div class="palco">
+        <video id="previa" playsinline autoplay muted></video>
+      </div>
+    </main>
+  </body>
+</html>
