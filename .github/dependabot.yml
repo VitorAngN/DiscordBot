@@ -10,6 +10,13 @@ updates:
       discord:
         patterns: ["discord.js", "@discordjs/*", "@snazzah/davey"]
 
+  - package-ecosystem: nuget
+    directory: /app
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: build(app)
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

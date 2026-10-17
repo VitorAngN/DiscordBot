@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>captura-audio</AssemblyName>
+    <Description>Ferramenta de linha de comando para testar a captura de som por programa.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Transmissor.Audio\Transmissor.Audio.csproj" />
+  </ItemGroup>
+
+</Project>

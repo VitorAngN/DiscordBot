@@ -6,6 +6,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Adicionado
+
+- App transmissor (`app/`): captura do som de um programa específico (só o jogo, ou tudo menos o Discord), em PCM 48 kHz estéreo, com silêncio preenchido para o áudio acompanhar o relógio.
+- Ferramenta `captura-audio` para listar janelas e gravar o som de um programa em WAV ou PCM cru.
+- CI do app no Windows e atualizações automáticas dos pacotes NuGet.
+
 ## [0.1.0] - 2026-10-17
 
 ### Adicionado
