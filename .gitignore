@@ -1,0 +1,35 @@
+# Dependências
+node_modules/
+
+# Segredos — nunca versionar
+.env
+.env.*
+!.env.example
+
+# Mídia local do bot (cada pessoa usa os próprios arquivos)
+bot/midia/*
+!bot/midia/.gitkeep
+
+# Logs e temporários
+*.log
+npm-debug.log*
+.tmp/
+coverage/
+
+# .NET (app transmissor)
+bin/
+obj/
+*.user
+.vs/
+
+# Cloudflare Workers (servidor)
+.wrangler/
+.dev.vars
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/
