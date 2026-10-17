@@ -2,39 +2,38 @@
 
 Transmita a janela do seu jogo (vídeo + áudio) para os amigos, usando o Discord como ponto de encontro e sem depender de outros aplicativos.
 
-> **Status:** em desenvolvimento, na Fase 1 (bot de áudio). Veja o [plano completo](docs/PLANO.md).
+> **Status:** em desenvolvimento. A Fase 1 (bot de som) está pronta na v0.1.0; agora vem a Fase 2 (transmissão). Veja o [plano completo](docs/PLANO.md).
 
 ## Por que existe
 
 Desde agosto de 2026, o Go Live, o compartilhamento de tela e as chamadas de vídeo do Discord estão suspensos no Brasil (ordem da ANPD). E bots do Discord só conseguem transmitir áudio.
 
-Por isso o vídeo vai **por fora do Discord**, numa página aberta no navegador. Dentro do Discord, um bot avisa que a transmissão começou, toca mídia e leva áudio para a call.
+Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa página aberta no navegador. Dentro do Discord, um bot avisa que a transmissão começou e também toca música na call.
 
 ## Como vai funcionar
 
 1. Você abre o app, escolhe a janela do jogo e clica em **Transmitir**.
-2. Seu bot posta no canal um aviso com o botão **Assistir**.
+2. Seu bot, que roda escondido dentro do app, posta no canal um aviso com o botão **Assistir**.
 3. Os amigos assistem no navegador, com vídeo e som sincronizados, enquanto conversam no canal de voz.
 
-O áudio é capturado só do jogo (ou de tudo menos o Discord), então a voz da call não volta para a transmissão.
+Só o som do jogo é capturado, então a voz da call não volta para a transmissão.
 
 ## Estrutura
 
 | Pasta | O que é | Estado |
 |---|---|---|
-| `bot/` | Motor do bot (Node.js + discord.js) | Em desenvolvimento |
+| [`bot/`](bot/README.md) | Bot do Discord (Node.js + discord.js) | Toca áudio na call |
 | `app/` | App transmissor para Windows (C# + WebView2) | Planejado |
 | `server/` | Servidor de transmissão (Cloudflare Workers) | Planejado |
 | `docs/` | Plano e documentação | — |
 
 ## Roteiro
 
-- [ ] **Fase 1:** bot entra na call e toca arquivos de áudio
-- [ ] **Fase 2:** captura de áudio por programa, sem retorno do Discord
-- [ ] **Fase 3:** transmissão de vídeo da janela e página de assistir
-- [ ] **Fase 4:** botão Transmitir integrado ao aviso do bot
-- [ ] **Fase 5:** interface final do app
-- [ ] **Fase 6:** pacote para os amigos instalarem
+- [x] **Fase 1 (v0.1.0):** bot entra na call e toca arquivos de áudio
+- [ ] **Fase 2 (v0.2.0):** transmissão da janela e do som do jogo para uma página no navegador
+- [ ] **Fase 3 (v0.3.0):** botão Transmitir faz o bot postar o link
+- [ ] **Fase 4 (v0.4.0):** interface final do app
+- [ ] **Fase 5 (v1.0.0):** pacote para os amigos instalarem
 
 ## Contribuindo
 
