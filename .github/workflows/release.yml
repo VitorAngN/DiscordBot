@@ -1,0 +1,34 @@
+name: Release
+
+# Ao publicar uma Release no GitHub, monta o Transmissor.exe (um arquivo só, com o .NET dentro)
+# e anexa na própria Release, para os amigos baixarem.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag da Release que vai receber o Transmissor.exe (ex.: v0.2.0)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  transmissor:
+    name: Transmissor.exe
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet publish app/src/Transmissor.App -p:PublishProfile=Pacote
+      - name: Anexar na Release
+        run: gh release upload "$env:TAG" artefatos/Transmissor.exe --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
