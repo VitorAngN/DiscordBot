@@ -13,6 +13,8 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - CI do app no Windows e atualizações automáticas dos pacotes NuGet.
 - Servidor de transmissão (`server/`) na Cloudflare: salas em Durable Objects, repasse de vídeo e som pelo Realtime SFU e API para o transmissor e para quem assiste.
 - Página de assistir (`/s/<sala>`), com reconexão automática, e página de teste para transmitir pelo navegador (`/transmitir`), com som estéreo.
+- Trava de uso no servidor: estima o consumo de quem assiste nos últimos 31 dias e, ao chegar no limite (900 GB, dentro da cota grátis do Realtime), encerra os espectadores e bloqueia novas transmissões.
+- Senha para assistir (`ASSISTIR_CHAVE`), para só os amigos verem a transmissão mesmo que o link vaze.
 - CI do servidor (tipos e testes).
 
 ## [0.1.0] - 2026-10-17

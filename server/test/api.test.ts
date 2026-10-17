@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tratarApi, type Dependencias } from '../src/api';
 import type { DadosDaSala, RepositorioDeSalas } from '../src/salas';
 import type { ClienteSfu } from '../src/sfu';
+import type { MedidorDeUso } from '../src/uso';
 
 const ORIGEM = 'https://transmissao.exemplo.workers.dev';
 const CHAVE = 'chave-de-teste';
@@ -27,14 +28,28 @@ function sfuFalso() {
   } satisfies ClienteSfu;
 }
 
+function medidorFalso() {
+  let total = 0;
+  return {
+    iniciar: vi.fn(async (_sessao: string) => {}),
+    presenca: vi.fn(async (_sessao: string) => total),
+    total: vi.fn(async () => total),
+    definirTotal: (bytes: number) => void (total = bytes),
+  } satisfies MedidorDeUso & { definirTotal(bytes: number): void };
+}
+
+const LIMITE = 900;
+
 let salas: ReturnType<typeof repositorioEmMemoria>;
 let sfu: ReturnType<typeof sfuFalso>;
+let uso: ReturnType<typeof medidorFalso>;
 let deps: Dependencias;
 
 beforeEach(() => {
   salas = repositorioEmMemoria();
   sfu = sfuFalso();
-  deps = { salas, sfu, chaveDeTransmissao: CHAVE, agora: () => 1_000 };
+  uso = medidorFalso();
+  deps = { salas, sfu, uso, chaveDeTransmissao: CHAVE, chaveDeAssistir: '', limiteDeUso: LIMITE, agora: () => 1_000 };
 });
 
 function pedir(metodo: string, caminho: string, { corpo, token }: { corpo?: unknown; token?: string } = {}) {
@@ -232,6 +247,89 @@ describe('encerrar', () => {
         })
       ).status,
     ).toBe(410);
+  });
+});
+
+describe('senha para assistir', () => {
+  beforeEach(() => {
+    deps.chaveDeAssistir = 'senha-dos-amigos';
+  });
+
+  it('esconde a sala de quem não tem a senha', async () => {
+    const { sala, token } = await criarSala('Só amigos');
+    await colocarAoVivo(sala, token);
+
+    expect((await pedir('GET', `/api/salas/${sala}`)).status).toBe(401);
+    expect((await pedir('GET', `/api/salas/${sala}`, { token: 'chute' })).status).toBe(401);
+    expect((await pedir('POST', `/api/salas/${sala}/assistir`)).status).toBe(401);
+    expect(sfu.assinar).not.toHaveBeenCalled();
+  });
+
+  it('com a senha, assiste normalmente', async () => {
+    const { sala, token } = await criarSala('Só amigos');
+    await colocarAoVivo(sala, token);
+    const senha = 'senha-dos-amigos';
+
+    expect((await corpo(await pedir('GET', `/api/salas/${sala}`, { token: senha }))).titulo).toBe('Só amigos');
+    expect((await pedir('POST', `/api/salas/${sala}/assistir`, { token: senha })).status).toBe(200);
+    const resposta = await pedir('POST', `/api/salas/${sala}/assistir/sessao-2/resposta`, {
+      token: senha,
+      corpo: { sessionDescription: RESPOSTA },
+    });
+    expect(resposta.status).toBe(204);
+  });
+});
+
+describe('trava de uso', () => {
+  it('começa a contar quem assiste e responde à presença', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    await pedir('POST', `/api/salas/${sala}/assistir`);
+
+    expect(uso.iniciar).toHaveBeenCalledWith('sessao-2');
+    const presenca = await corpo(await pedir('POST', `/api/salas/${sala}/assistir/sessao-2/presenca`));
+    expect(presenca).toEqual({ continuar: true, motivo: null, publicacao: 1 });
+    expect(uso.presenca).toHaveBeenCalledWith('sessao-2');
+  });
+
+  it('no limite, para quem assiste e bloqueia novas transmissões', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    uso.definirTotal(LIMITE);
+
+    const presenca = await corpo(await pedir('POST', `/api/salas/${sala}/assistir/sessao-2/presenca`));
+    expect(presenca).toMatchObject({ continuar: false, motivo: 'limite' });
+
+    const assistir = await pedir('POST', `/api/salas/${sala}/assistir`);
+    expect(assistir.status).toBe(429);
+    expect((await corpo(assistir)).erro).toContain('limite grátis');
+    expect((await pedir('POST', '/api/salas', { token: CHAVE })).status).toBe(429);
+    const publicar = await pedir('POST', `/api/salas/${sala}/publicar`, {
+      token,
+      corpo: { sessionDescription: OFERTA, tracks: [{ mid: '0', trackName: 'video' }] },
+    });
+    expect(publicar.status).toBe(429);
+  });
+
+  it('avisa quem assiste quando a transmissão termina', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    await pedir('DELETE', `/api/salas/${sala}`, { token });
+
+    const presenca = await corpo(await pedir('POST', `/api/salas/${sala}/assistir/sessao-2/presenca`));
+    expect(presenca).toMatchObject({ continuar: false, motivo: 'encerrada' });
+  });
+
+  it('mostra o uso só para quem tem a chave de transmissão', async () => {
+    uso.definirTotal(123);
+
+    expect((await pedir('GET', '/api/uso')).status).toBe(401);
+    expect(await corpo(await pedir('GET', '/api/uso', { token: CHAVE }))).toEqual({
+      usado: 123,
+      limite: LIMITE,
+      janelaDias: 31,
+      atingido: false,
+    });
   });
 });
 

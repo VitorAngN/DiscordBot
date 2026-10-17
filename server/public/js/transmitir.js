@@ -19,10 +19,23 @@ const elementos = {
   status: $('status'),
   selo: $('selo'),
   previa: $('previa'),
+  uso: $('uso'),
 };
 
-/** Transmissão atual: { sala, token, pc, midia } */
+/** Transmissão atual: { sala, token, pc, midia, relogioDeUso } */
 let atual = null;
+
+const emGb = (bytes) => (bytes / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
+/** Mostra quanto da cota grátis já foi usado (estimativa do servidor). */
+async function atualizarUso(chave) {
+  try {
+    const { usado, limite, janelaDias } = await api('/api/uso', { token: chave });
+    elementos.uso.textContent = `Uso estimado nos últimos ${janelaDias} dias: ${emGb(usado)} GB de ${emGb(limite)} GB (trava de uso).`;
+  } catch {
+    elementos.uso.textContent = '';
+  }
+}
 
 function mostrarStatus(texto, tipo = 'info') {
   elementos.status.textContent = texto;
@@ -113,6 +126,8 @@ async function iniciar() {
     await api(`/api/salas/${sala}/ao-vivo`, { metodo: 'POST', token });
 
     elementos.link.textContent = link;
+    atualizarUso(chave);
+    atual.relogioDeUso = setInterval(() => atualizarUso(chave), 60_000);
     elementos.aoVivo.hidden = false;
     elementos.formulario.hidden = true;
     mostrarSelo('ao-vivo', '● AO VIVO');
@@ -133,6 +148,7 @@ async function encerrar({ manterStatus = false } = {}) {
   const transmissao = atual;
   atual = null;
   if (transmissao) {
+    clearInterval(transmissao.relogioDeUso);
     transmissao.midia.getTracks().forEach((t) => t.stop());
     transmissao.pc?.close();
     if (transmissao.sala) {

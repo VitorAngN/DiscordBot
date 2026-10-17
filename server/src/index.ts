@@ -2,13 +2,17 @@ import { DurableObject } from 'cloudflare:workers';
 import { tratarApi } from './api';
 import type { DadosDaSala, RepositorioDeSalas } from './salas';
 import { criarClienteSfu } from './sfu';
+import { ContadorDeUso, DIA_MS, limiteEmBytes, type MedidorDeUso } from './uso';
 
 export interface Env {
   SALAS: DurableObjectNamespace<Sala>;
+  USO: DurableObjectNamespace<Uso>;
   ASSETS: Fetcher;
   REALTIME_APP_ID?: string;
   REALTIME_APP_SECRET?: string;
   TRANSMISSAO_CHAVE?: string;
+  ASSISTIR_CHAVE?: string;
+  LIMITE_GB_MES?: string;
 }
 
 /** Salas sem atividade por mais tempo que isso são apagadas. */
@@ -30,11 +34,64 @@ export class Sala extends DurableObject<Env> {
   }
 }
 
+/** Instância única que soma o uso de todas as salas, por dia. */
+export class Uso extends DurableObject<Env> {
+  readonly #contador: ContadorDeUso;
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    const storage = ctx.storage;
+    this.#contador = new ContadorDeUso({
+      vistoEm: (sessao) => storage.get<number>(`sessao:${sessao}`),
+      marcarVisto: (sessao, quando) => storage.put(`sessao:${sessao}`, quando),
+      somarNoDia: async (dia, bytes) => storage.put(`dia:${dia}`, ((await storage.get<number>(`dia:${dia}`)) ?? 0) + bytes),
+      dias: async () => {
+        const dias = await storage.list<number>({ prefix: 'dia:' });
+        return new Map([...dias].map(([chave, bytes]) => [chave.slice('dia:'.length), bytes]));
+      },
+      apagarDias: async (dias) => {
+        await storage.delete(dias.map((dia) => `dia:${dia}`));
+      },
+    });
+  }
+
+  async iniciar(sessao: string): Promise<void> {
+    await this.#contador.iniciar(sessao);
+    if ((await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now() + DIA_MS);
+  }
+
+  presenca(sessao: string): Promise<number> {
+    return this.#contador.presenca(sessao);
+  }
+
+  total(): Promise<number> {
+    return this.#contador.total();
+  }
+
+  /** Uma vez por dia, esquece as sessões que pararam de assistir. */
+  override async alarm(): Promise<void> {
+    const antes = Date.now() - DIA_MS;
+    const sessoes = await this.ctx.storage.list<number>({ prefix: 'sessao:' });
+    const paradas = [...sessoes].filter(([, visto]) => visto < antes).map(([chave]) => chave);
+    for (let i = 0; i < paradas.length; i += 128) await this.ctx.storage.delete(paradas.slice(i, i + 128));
+    if (sessoes.size > paradas.length) await this.ctx.storage.setAlarm(Date.now() + DIA_MS);
+  }
+}
+
 function repositorio(salas: DurableObjectNamespace<Sala>): RepositorioDeSalas {
   const sala = (id: string) => salas.get(salas.idFromName(id));
   return {
     obter: (id) => sala(id).obter(),
     salvar: (id, dados) => sala(id).salvar(dados),
+  };
+}
+
+function medidor(uso: DurableObjectNamespace<Uso>): MedidorDeUso {
+  const global = uso.get(uso.idFromName('global'));
+  return {
+    iniciar: (sessao) => global.iniciar(sessao),
+    presenca: (sessao) => global.presenca(sessao),
+    total: () => global.total(),
   };
 }
 
@@ -50,6 +107,9 @@ export default {
         salas: repositorio(env.SALAS),
         sfu: appId && segredo ? criarClienteSfu(appId, segredo) : null,
         chaveDeTransmissao: env.TRANSMISSAO_CHAVE ?? '',
+        chaveDeAssistir: env.ASSISTIR_CHAVE ?? '',
+        uso: medidor(env.USO),
+        limiteDeUso: limiteEmBytes(env.LIMITE_GB_MES),
       });
     }
 
