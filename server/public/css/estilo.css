@@ -85,6 +85,42 @@ p {
   background: #000;
 }
 
+/* Em tela cheia, o palco ocupa a tela toda, sem bordas arredondadas */
+.palco:fullscreen {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+.atalhos {
+  font-size: 0.875rem;
+}
+
+/* Atalhos de teclado não fazem sentido em telas de toque */
+@media (hover: none) {
+  .atalhos {
+    display: none;
+  }
+}
+
+button.secundario {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+}
+
+button.secundario:hover:not(:disabled) {
+  background: var(--borda);
+}
+
 .sobreposicao {
   position: absolute;
   inset: 0;
@@ -131,7 +167,8 @@ label {
 }
 
 input[type="text"],
-input[type="password"] {
+input[type="password"],
+select {
   display: block;
   width: 100%;
   margin-top: 6px;

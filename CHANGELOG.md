@@ -16,6 +16,8 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Trava de uso no servidor: estima o consumo de quem assiste nos últimos 31 dias e, ao chegar no limite (900 GB, dentro da cota grátis do Realtime), encerra os espectadores e bloqueia novas transmissões.
 - Senha para assistir (`ASSISTIR_CHAVE`), para só os amigos verem a transmissão mesmo que o link vaze.
 - CI do servidor (tipos e testes).
+- Página de assistir com tela cheia (deita a tela no celular) e janela flutuante (Picture-in-Picture), com atalhos F e P.
+- Escolha de qualidade ao transmitir, com teto em Full HD (1080p ou 720p, a 60 ou 30 fps). A trava de uso conta cada espectador pela qualidade da sala.
 
 ## [0.1.0] - 2026-10-17
 

@@ -1,9 +1,9 @@
+import { QUALIDADE_PADRAO, QUALIDADES, TAXA_AUDIO, qualidadeValida, taxaPorEspectador } from './qualidade.js';
 import { opusEstereo } from './sdp.js';
 import { aguardarCandidatos, aguardarConexao, api, novaConexao } from './webrtc.js';
 
-// Bom para 1080p/60 fps de jogo; o navegador baixa sozinho se a internet não aguentar
-const TAXA_MAXIMA_VIDEO = 6_000_000;
 const CHAVE_SALVA = 'discordbot:chave';
+const QUALIDADE_SALVA = 'discordbot:qualidade';
 
 const $ = (id) => document.getElementById(id);
 const elementos = {
@@ -20,6 +20,8 @@ const elementos = {
   selo: $('selo'),
   previa: $('previa'),
   uso: $('uso'),
+  qualidade: $('qualidade'),
+  dicaQualidade: $('dicaQualidade'),
 };
 
 /** Transmissão atual: { sala, token, pc, midia, relogioDeUso } */
@@ -64,16 +66,48 @@ function guardarChave(chave) {
   }
 }
 
+function montarQualidades() {
+  for (const [id, q] of Object.entries(QUALIDADES)) {
+    const mbps = (q.taxaVideo / 1e6).toLocaleString('pt-BR');
+    elementos.qualidade.add(new Option(`${q.nome} (até ${mbps} Mbps)`, id));
+  }
+  let salva = null;
+  try {
+    salva = localStorage.getItem(QUALIDADE_SALVA);
+  } catch {
+    // Sem armazenamento: usa a padrão
+  }
+  elementos.qualidade.value = salva && qualidadeValida(salva) ? salva : QUALIDADE_PADRAO;
+  mostrarDicaDeQualidade();
+}
+
+/** Quanto cada amigo assistindo gasta da cota grátis por hora, nessa qualidade. */
+function mostrarDicaDeQualidade() {
+  const gbPorHora = ((taxaPorEspectador(elementos.qualidade.value) / 8) * 3600) / 1e9;
+  elementos.dicaQualidade.textContent = `Cada amigo assistindo gasta até ~${gbPorHora.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} GB da cota grátis por hora. Mais qualidade também pede mais upload da sua internet.`;
+}
+
 async function iniciar() {
   const chave = elementos.chave.value.trim();
   guardarChave(chave);
+  const idQualidade = elementos.qualidade.value;
+  const qualidade = QUALIDADES[idQualidade];
+  try {
+    localStorage.setItem(QUALIDADE_SALVA, idQualidade);
+  } catch {
+    // Só não lembra
+  }
   elementos.iniciar.disabled = true;
   mostrarStatus('Escolha a janela ou aba para transmitir…');
 
   let midia;
   try {
     midia = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: 60 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      video: {
+        width: { max: qualidade.largura },
+        height: { max: qualidade.altura },
+        frameRate: { ideal: qualidade.fps, max: qualidade.fps },
+      },
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       systemAudio: 'include',
       selfBrowserSurface: 'exclude',
@@ -93,16 +127,25 @@ async function iniciar() {
   try {
     mostrarStatus('Criando a sala…');
     const titulo = elementos.titulo.value.trim();
-    const { sala, link, token } = await api('/api/salas', { metodo: 'POST', token: chave, corpo: { titulo } });
+    const { sala, link, token } = await api('/api/salas', {
+      metodo: 'POST',
+      token: chave,
+      corpo: { titulo, qualidade: idQualidade },
+    });
     const pc = novaConexao();
     Object.assign(atual, { sala, token, pc });
 
+    // Se o navegador capturou maior que o teto (ex.: monitor 4K), reduz no envio
+    const { width = qualidade.largura, height = qualidade.altura } = video.getSettings();
+    const reducao = Math.max(1, width / qualidade.largura, height / qualidade.altura);
     const faixas = [
       {
         trackName: 'video',
         transceptor: pc.addTransceiver(video, {
           direction: 'sendonly',
-          sendEncodings: [{ maxBitrate: TAXA_MAXIMA_VIDEO, maxFramerate: 60 }],
+          sendEncodings: [
+            { maxBitrate: qualidade.taxaVideo, maxFramerate: qualidade.fps, scaleResolutionDownBy: reducao },
+          ],
         }),
       },
     ];
@@ -121,7 +164,7 @@ async function iniciar() {
       },
     });
     // Estéreo no envio: o codificador segue o que a resposta do SFU pede
-    await pc.setRemoteDescription({ type: 'answer', sdp: opusEstereo(sessionDescription.sdp) });
+    await pc.setRemoteDescription({ type: 'answer', sdp: opusEstereo(sessionDescription.sdp, TAXA_AUDIO) });
     await aguardarConexao(pc);
     await api(`/api/salas/${sala}/ao-vivo`, { metodo: 'POST', token });
 
@@ -131,7 +174,11 @@ async function iniciar() {
     elementos.aoVivo.hidden = false;
     elementos.formulario.hidden = true;
     mostrarSelo('ao-vivo', '● AO VIVO');
-    mostrarStatus(audio ? 'Ao vivo com vídeo e som.' : 'Ao vivo, mas sem som: para ter som, compartilhe uma aba com o som ligado.');
+    mostrarStatus(
+      audio
+        ? `Ao vivo com vídeo e som, em ${qualidade.nome}.`
+        : `Ao vivo em ${qualidade.nome}, mas sem som: para ter som, compartilhe uma aba com o som ligado.`,
+    );
 
     // O usuário clicou em "Parar de compartilhar" na barra do navegador
     video.addEventListener('ended', () => encerrar());
@@ -182,6 +229,9 @@ window.addEventListener('pagehide', () => {
     keepalive: true,
   });
 });
+
+montarQualidades();
+elementos.qualidade.addEventListener('change', mostrarDicaDeQualidade);
 
 const salva = lerChaveSalva();
 if (salva) {

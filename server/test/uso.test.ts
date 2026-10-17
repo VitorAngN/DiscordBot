@@ -6,16 +6,20 @@ import {
   GB,
   MAX_INTERVALO_MS,
   limiteEmBytes,
+  TAXA_ESTIMADA_BPS,
   type ArmazenamentoDeUso,
+  type SessaoDeUso,
 } from '../src/uso';
 
+const TAXA = TAXA_ESTIMADA_BPS;
+
 function armazenamentoEmMemoria(): ArmazenamentoDeUso & { diasGuardados: Map<string, number> } {
-  const sessoes = new Map<string, number>();
+  const sessoes = new Map<string, SessaoDeUso>();
   const diasGuardados = new Map<string, number>();
   return {
     diasGuardados,
-    vistoEm: async (s) => sessoes.get(s),
-    marcarVisto: async (s, q) => void sessoes.set(s, q),
+    sessao: async (id) => sessoes.get(id),
+    salvarSessao: async (id, s) => void sessoes.set(id, s),
     somarNoDia: async (d, b) => void diasGuardados.set(d, (diasGuardados.get(d) ?? 0) + b),
     dias: async () => new Map(diasGuardados),
     apagarDias: async (dias) => dias.forEach((d) => diasGuardados.delete(d)),
@@ -43,7 +47,7 @@ describe('ContadorDeUso', () => {
     const r = relogio();
     const contador = new ContadorDeUso(armazenamentoEmMemoria(), r.agora);
 
-    await contador.iniciar('a');
+    await contador.iniciar('a', TAXA);
     r.avancar(15_000);
     expect(await contador.presenca('a')).toBe(bytesEstimados(15_000));
     r.avancar(15_000);
@@ -53,12 +57,22 @@ describe('ContadorDeUso', () => {
   it('soma vários espectadores ao mesmo tempo', async () => {
     const r = relogio();
     const contador = new ContadorDeUso(armazenamentoEmMemoria(), r.agora);
-    await contador.iniciar('a');
-    await contador.iniciar('b');
+    await contador.iniciar('a', TAXA);
+    await contador.iniciar('b', TAXA);
     r.avancar(10_000);
     await contador.presenca('a');
 
     expect(await contador.presenca('b')).toBe(2 * bytesEstimados(10_000));
+  });
+
+  it('conta cada espectador pela qualidade da sala que ele assiste', async () => {
+    const r = relogio();
+    const contador = new ContadorDeUso(armazenamentoEmMemoria(), r.agora);
+    await contador.iniciar('720p', 3_000_000);
+    r.avancar(10_000);
+
+    expect(await contador.presenca('720p')).toBe(bytesEstimados(10_000, 3_000_000));
+    expect(bytesEstimados(10_000, 3_000_000)).toBeLessThan(bytesEstimados(10_000));
   });
 
   it('sessão desconhecida só começa a contar a partir do primeiro sinal', async () => {
@@ -74,7 +88,7 @@ describe('ContadorDeUso', () => {
     const r = relogio();
     const armazenamento = armazenamentoEmMemoria();
     const contador = new ContadorDeUso(armazenamento, r.agora);
-    await contador.iniciar('a');
+    await contador.iniciar('a', TAXA);
     r.avancar(15_000);
     await contador.presenca('a');
 
