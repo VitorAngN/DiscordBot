@@ -22,7 +22,7 @@ O áudio é capturado só do jogo (ou de tudo menos o Discord), então a voz da 
 
 | Pasta | O que é | Estado |
 |---|---|---|
-| `bot/` | Motor do bot (Node.js + discord.js) | Em desenvolvimento |
+| [`bot/`](bot/README.md) | Motor do bot (Node.js + discord.js) | Toca áudio na call |
 | `app/` | App transmissor para Windows (C# + WebView2) | Planejado |
 | `server/` | Servidor de transmissão (Cloudflare Workers) | Planejado |
 | `docs/` | Plano e documentação | — |
