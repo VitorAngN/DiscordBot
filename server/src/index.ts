@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { tratarApi } from './api';
 import type { DadosDaSala, RepositorioDeSalas } from './salas';
 import { criarClienteSfu } from './sfu';
-import { ContadorDeUso, DIA_MS, limiteEmBytes, type MedidorDeUso } from './uso';
+import { ContadorDeUso, DIA_MS, limiteEmBytes, TAXA_ESTIMADA_BPS, type MedidorDeUso, type SessaoDeUso } from './uso';
 
 export interface Env {
   SALAS: DurableObjectNamespace<Sala>;
@@ -34,6 +34,13 @@ export class Sala extends DurableObject<Env> {
   }
 }
 
+/** Versões anteriores guardavam só o horário (número); essas contam no pior caso de qualidade. */
+type SessaoGuardada = SessaoDeUso | number;
+
+function lerSessao(valor: SessaoGuardada | undefined): SessaoDeUso | undefined {
+  return typeof valor === 'number' ? { visto: valor, taxa: TAXA_ESTIMADA_BPS } : valor;
+}
+
 /** Instância única que soma o uso de todas as salas, por dia. */
 export class Uso extends DurableObject<Env> {
   readonly #contador: ContadorDeUso;
@@ -42,8 +49,8 @@ export class Uso extends DurableObject<Env> {
     super(ctx, env);
     const storage = ctx.storage;
     this.#contador = new ContadorDeUso({
-      vistoEm: (sessao) => storage.get<number>(`sessao:${sessao}`),
-      marcarVisto: (sessao, quando) => storage.put(`sessao:${sessao}`, quando),
+      sessao: async (id) => lerSessao(await storage.get<SessaoGuardada>(`sessao:${id}`)),
+      salvarSessao: (id, sessao) => storage.put(`sessao:${id}`, sessao),
       somarNoDia: async (dia, bytes) => storage.put(`dia:${dia}`, ((await storage.get<number>(`dia:${dia}`)) ?? 0) + bytes),
       dias: async () => {
         const dias = await storage.list<number>({ prefix: 'dia:' });
@@ -55,8 +62,8 @@ export class Uso extends DurableObject<Env> {
     });
   }
 
-  async iniciar(sessao: string): Promise<void> {
-    await this.#contador.iniciar(sessao);
+  async iniciar(sessao: string, taxaBps: number): Promise<void> {
+    await this.#contador.iniciar(sessao, taxaBps);
     if ((await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now() + DIA_MS);
   }
 
@@ -71,8 +78,8 @@ export class Uso extends DurableObject<Env> {
   /** Uma vez por dia, esquece as sessões que pararam de assistir. */
   override async alarm(): Promise<void> {
     const antes = Date.now() - DIA_MS;
-    const sessoes = await this.ctx.storage.list<number>({ prefix: 'sessao:' });
-    const paradas = [...sessoes].filter(([, visto]) => visto < antes).map(([chave]) => chave);
+    const sessoes = await this.ctx.storage.list<SessaoGuardada>({ prefix: 'sessao:' });
+    const paradas = [...sessoes].filter(([, valor]) => lerSessao(valor)!.visto < antes).map(([chave]) => chave);
     for (let i = 0; i < paradas.length; i += 128) await this.ctx.storage.delete(paradas.slice(i, i + 128));
     if (sessoes.size > paradas.length) await this.ctx.storage.setAlarm(Date.now() + DIA_MS);
   }
@@ -89,7 +96,7 @@ function repositorio(salas: DurableObjectNamespace<Sala>): RepositorioDeSalas {
 function medidor(uso: DurableObjectNamespace<Uso>): MedidorDeUso {
   const global = uso.get(uso.idFromName('global'));
   return {
-    iniciar: (sessao) => global.iniciar(sessao),
+    iniciar: (sessao, taxaBps) => global.iniciar(sessao, taxaBps),
     presenca: (sessao) => global.presenca(sessao),
     total: () => global.total(),
   };

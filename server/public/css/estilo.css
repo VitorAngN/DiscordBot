@@ -167,7 +167,8 @@ label {
 }
 
 input[type="text"],
-input[type="password"] {
+input[type="password"],
+select {
   display: block;
   width: 100%;
   margin-top: 6px;

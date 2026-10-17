@@ -1,4 +1,5 @@
 // Regras das salas, sem depender do armazenamento.
+import { QUALIDADES } from '../public/js/qualidade.js';
 
 /**
  * `aguardando`: criada, ainda sem vídeo confirmado.
@@ -17,6 +18,8 @@ export interface Publicacao {
 
 export interface DadosDaSala {
   titulo: string;
+  /** Chave de `QUALIDADES`. Salas antigas não têm (contam como a mais alta). */
+  qualidade?: string;
   criadaEm: number;
   hashDoToken: string;
   estado: EstadoDaSala;
@@ -31,8 +34,8 @@ export interface RepositorioDeSalas {
 export const TITULO_PADRAO = 'Transmissão';
 export const MAX_TITULO = 100;
 
-export function novaSala(titulo: string, hashDoToken: string, agora: number): DadosDaSala {
-  return { titulo, criadaEm: agora, hashDoToken, estado: 'aguardando', publicacao: null };
+export function novaSala(titulo: string, qualidade: string, hashDoToken: string, agora: number): DadosDaSala {
+  return { titulo, qualidade, criadaEm: agora, hashDoToken, estado: 'aguardando', publicacao: null };
 }
 
 /** Nova conexão do transmissor ao SFU. Fica `aguardando` até ele confirmar que conectou. */
@@ -53,6 +56,7 @@ export function encerrar(sala: DadosDaSala): DadosDaSala {
 export function resumoPublico(sala: DadosDaSala) {
   return {
     titulo: sala.titulo,
+    qualidade: (sala.qualidade && QUALIDADES[sala.qualidade]?.nome) || null,
     estado: sala.estado,
     publicacao: sala.estado === 'ao-vivo' ? (sala.publicacao?.numero ?? null) : null,
     inicio: sala.estado === 'ao-vivo' ? (sala.publicacao?.inicio ?? null) : null,

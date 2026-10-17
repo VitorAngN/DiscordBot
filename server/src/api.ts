@@ -16,6 +16,7 @@ import {
 } from './salas';
 import { ErroSfu, type ClienteSfu, type DescricaoDeSessao, type FaixaLocal } from './sfu';
 import { JANELA_DIAS, type MedidorDeUso } from './uso';
+import { QUALIDADE_PADRAO, qualidadeValida, taxaPorEspectador } from '../public/js/qualidade.js';
 
 export interface Dependencias {
   salas: RepositorioDeSalas;
@@ -120,13 +121,17 @@ async function criarSala(req: Request, deps: Dependencias, origem: string): Prom
   await exigirChaveDeTransmissao(req, deps);
   await exigirCota(deps);
 
-  const corpo = await lerJson<{ titulo?: unknown }>(req, true);
+  const corpo = await lerJson<{ titulo?: unknown; qualidade?: unknown }>(req, true);
   const titulo = typeof corpo?.titulo === 'string' && corpo.titulo.trim() ? corpo.titulo.trim().slice(0, MAX_TITULO) : TITULO_PADRAO;
+  const qualidade = corpo?.qualidade ?? QUALIDADE_PADRAO;
+  if (typeof qualidade !== 'string' || !qualidadeValida(qualidade)) {
+    throw new ErroHttp(400, 'Qualidade inválida. Use 1080p60, 1080p30, 720p60 ou 720p30.');
+  }
 
   let id = gerarIdDeSala();
   while (await deps.salas.obter(id)) id = gerarIdDeSala();
   const token = gerarToken();
-  await deps.salas.salvar(id, novaSala(titulo, await hashDe(token), agora(deps)));
+  await deps.salas.salvar(id, novaSala(titulo, qualidade, await hashDe(token), agora(deps)));
 
   return json({ sala: id, link: `${origem}/s/${id}`, token }, 201);
 }
@@ -166,7 +171,7 @@ async function assistir({ req, deps, sala }: Contexto): Promise<Response> {
 
   const sessionId = await sfu.novaSessao();
   const { oferta, faixas } = await sfu.assinar(sessionId, sala.publicacao.sessionId, sala.publicacao.faixas);
-  await deps.uso.iniciar(sessionId);
+  await deps.uso.iniciar(sessionId, taxaPorEspectador(sala.qualidade));
   return json({ sessionId, sessionDescription: oferta, faixas, publicacao: sala.publicacao.numero });
 }
 

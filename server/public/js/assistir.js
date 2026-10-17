@@ -182,7 +182,7 @@ async function conferirSala() {
 
   mostrarSelo('ao-vivo', '● AO VIVO');
   const inicio = new Date(info.inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  elementos.detalhe.textContent = `Ao vivo desde ${inicio}`;
+  elementos.detalhe.textContent = `Ao vivo desde ${inicio}${info.qualidade ? ` · ${info.qualidade}` : ''}`;
   if (!querAssistir) {
     // O som só pode tocar depois de um clique de quem está assistindo
     mostrarSobreposicao('A transmissão está ao vivo.', { botao: true });
