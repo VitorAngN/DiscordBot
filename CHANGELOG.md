@@ -22,6 +22,7 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Trocar a janela durante a transmissão, sem derrubar a sala (no app, o som troca junto), e mudar o modo de som ao vivo.
 - Tela cheia e janela flutuante também na prévia de quem transmite.
 - Comando `captura-audio sessoes`, que lista quem tem som aberto e confere que todo o som do Discord fica de fora.
+- `Transmissor.exe` para os amigos: um arquivo só, com o .NET dentro, gerado e anexado automaticamente a cada Release. Inclui o [guia para os amigos](docs/AMIGOS.md).
 
 ### Corrigido
 

@@ -1,0 +1,49 @@
+# Guia para os amigos
+
+## Só quero assistir
+
+Você não precisa instalar nada.
+
+1. Abra o **link** que mandaram no Discord (funciona no celular e no PC).
+2. Digite a **senha para assistir** que te passaram.
+3. Toque em **▶ Assistir**.
+
+Embaixo do vídeo tem **⛶ Tela cheia** e **🗗 Janela flutuante**. A janela flutuante deixa o vídeo numa janelinha por cima de tudo, que dá para arrastar e redimensionar.
+
+## Quero transmitir o meu jogo
+
+### O que você precisa
+
+- **Windows 10 (versão 2004 ou mais nova) ou Windows 11**
+- O app **`Transmissor.exe`**: baixe na [página de downloads](https://github.com/VitorAngN/DiscordBot/releases/latest)
+- Duas coisas que o dono do servidor te passa **no privado**: o **endereço do servidor** e a **senha de transmitir**
+
+### Primeira vez
+
+1. Baixe o `Transmissor.exe`. Se o navegador avisar que o arquivo "não é baixado com frequência", escolha **Manter**.
+2. Abra o `Transmissor.exe`. Se aparecer **"O Windows protegeu o computador"**, clique em **Mais informações → Executar assim mesmo**. O aviso aparece porque o app não tem assinatura digital paga, não porque tem vírus.
+3. O app pede o **endereço do servidor**: cole o que te mandaram e clique em **Salvar**. Ele não pede de novo.
+
+Não precisa instalar: o app é um arquivo só. Pode deixar ele na Área de Trabalho, por exemplo.
+
+### Transmitir
+
+1. Digite a **senha de transmitir**, um **título** e escolha a **qualidade**. Na dúvida, deixe **720p · 60 fps**.
+2. Em **Som**, deixe **"Todo o som do PC, menos o Discord"**. Assim a call do Discord **nunca** entra na transmissão, e ninguém ouve retorno.
+3. Clique em **Escolher a janela do jogo**, escolha a janela (ou a tela inteira) e confirme.
+4. Quando aparecer **● AO VIVO**, clique em **Copiar** e mande o link no Discord, junto com a senha para assistir.
+
+Durante a transmissão:
+- **🔄 Trocar janela:** muda o que está sendo transmitido sem derrubar ninguém.
+- **Som:** dá para trocar o modo sem parar.
+- **Encerrar transmissão:** termina para todo mundo.
+
+### Se algo der errado
+
+| O que acontece | O que fazer |
+|---|---|
+| "Chave de transmissão inválida" | Confira a senha de transmitir com quem te passou |
+| A página não abre no app | Menu **Servidor…** e confira o endereço; depois **Recarregar** (F5) |
+| Os amigos ouvem a call do Discord | Confira se o **Som** está em "Todo o som do PC, menos o Discord" e se você está transmitindo **pelo app**, não pelo navegador |
+| "O limite grátis de transmissão foi atingido" | A cota grátis do mês acabou. Ela volta sozinha com o tempo |
+| Outro problema | No app, menu **Abrir registro**, e mande o arquivo para o dono do servidor |

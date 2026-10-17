@@ -18,6 +18,13 @@ Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa pá
 
 Só o som do jogo é capturado, então a voz da call não volta para a transmissão.
 
+## Para os amigos
+
+- **Assistir:** basta abrir o link e digitar a senha para assistir.
+- **Transmitir:** baixe o `Transmissor.exe` na [página de downloads](https://github.com/VitorAngN/DiscordBot/releases/latest). É um arquivo só, sem instalação. Peça ao dono do servidor o endereço e a senha de transmitir.
+
+O passo a passo está no [guia para os amigos](docs/AMIGOS.md).
+
 ## Estrutura
 
 | Pasta | O que é | Estado |
