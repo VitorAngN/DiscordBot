@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Transmitir pelo navegador</title>
+    <title>Transmitir</title>
     <meta name="robots" content="noindex" />
     <link rel="stylesheet" href="/css/estilo.css" />
     <script type="module" src="/js/transmitir.js"></script>
@@ -12,8 +12,8 @@
     <main>
       <div class="cabecalho">
         <div>
-          <h1>Transmitir pelo navegador</h1>
-          <p class="suave">Página de teste do servidor. O app do Windows vai fazer isso capturando só o som do jogo.</p>
+          <h1 id="tituloPagina">Transmitir pelo navegador</h1>
+          <p class="suave" id="subtitulo">Página de teste do servidor. O app do Windows faz isso capturando só o som do jogo.</p>
         </div>
         <span class="selo" id="selo" data-estado="parado">Parado</span>
       </div>
@@ -33,7 +33,14 @@
           <select id="qualidade"></select>
         </label>
         <p class="suave" id="dicaQualidade"></p>
-        <p class="suave">
+        <label id="campoSom" hidden>
+          Som
+          <select id="modoSom">
+            <option value="jogo">Só o programa da janela escolhida (recomendado)</option>
+            <option value="sem-discord">Todo o som do PC, menos o Discord</option>
+          </select>
+        </label>
+        <p class="suave" id="dicaNavegador">
           No navegador, compartilhe uma <strong>aba</strong> com o som ligado (ex.: um vídeo do YouTube). Se compartilhar a
           tela inteira com som, a voz da call do Discord também entra.
         </p>
@@ -47,13 +54,29 @@
           <button type="button" id="copiar">Copiar</button>
           <button type="button" class="perigo" id="parar">Encerrar transmissão</button>
         </div>
+        <div class="linha controles-ao-vivo">
+          <button type="button" class="secundario" id="trocar">🔄 Trocar o que transmitir</button>
+          <label class="opcao" id="campoSomAoVivo" hidden>
+            Som:
+            <select id="modoSomAoVivo">
+              <option value="jogo">Só o programa da janela</option>
+              <option value="sem-discord">Tudo menos o Discord</option>
+            </select>
+          </label>
+        </div>
         <p class="suave" id="uso"></p>
       </section>
 
       <p class="status" id="status" role="status"></p>
 
-      <div class="palco">
+      <div class="palco" id="palco">
         <video id="previa" playsinline autoplay muted></video>
+      </div>
+
+      <div class="barra">
+        <button type="button" class="secundario" id="telaCheia" title="Tela cheia (F ou duplo clique)" disabled>⛶ Tela cheia</button>
+        <button type="button" class="secundario" id="flutuante" title="Janela flutuante (P)" disabled hidden>🗗 Janela flutuante</button>
+        <span class="suave atalhos">Prévia do que os amigos veem</span>
       </div>
     </main>
   </body>
