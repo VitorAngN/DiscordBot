@@ -18,6 +18,9 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - CI do servidor (tipos e testes).
 - Página de assistir com tela cheia (deita a tela no celular) e janela flutuante (Picture-in-Picture), com atalhos F e P.
 - Escolha de qualidade ao transmitir, com teto em Full HD (1080p ou 720p, a 60 ou 30 fps). A trava de uso conta cada espectador pela qualidade da sala.
+- **App transmissor** (`app/src/Transmissor.App`): abre a página de transmitir do servidor num WebView2, pega a imagem da janela escolhida e envia só o som do programa dono dela, sem a call do Discord. Se não der para saber o dono da janela, pergunta de qual programa é o som.
+- Trocar a janela durante a transmissão, sem derrubar a sala (no app, o som troca junto), e mudar o modo de som ao vivo.
+- Tela cheia e janela flutuante também na prévia de quem transmite.
 
 ## [0.1.0] - 2026-10-17
 
