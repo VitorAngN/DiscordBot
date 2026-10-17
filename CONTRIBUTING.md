@@ -45,15 +45,17 @@ Mudança incompatível: use `!` depois do tipo (`feat(bot)!: ...`) e explique no
 O projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/) (`MAJOR.MINOR.PATCH`), com uma versão única para o repositório.
 
 - Enquanto estiver em `0.x`, cada fase concluída sobe o MINOR (Fase 1 → `0.1.0`, Fase 2 → `0.2.0`…). Correções sobem o PATCH.
-- A `1.0.0` sai quando o app estiver pronto para os amigos instalarem (Fase 6).
+- A `1.0.0` sai quando o app estiver pronto para os amigos instalarem (Fase 5).
 
 ### Como lançar uma versão
 
-1. Na `main` atualizada, mova as entradas de `[Unreleased]` no `CHANGELOG.md` para a nova versão, com a data.
-2. Atualize o campo `version` nos `package.json`.
-3. Faça o commit `chore(release): vX.Y.Z`.
-4. Crie a tag anotada `git tag -a vX.Y.Z -m "vX.Y.Z"` e envie com `git push --follow-tags`.
-5. Publique a Release no GitHub a partir da tag, colando a seção do changelog.
+Como a `main` só recebe mudanças por PR, a preparação da versão entra no PR que fecha a fase (ou num PR `chore/release-vX.Y.Z`):
+
+1. Mova as entradas de `[Unreleased]` no `CHANGELOG.md` para a nova versão, com a data, e atualize os links no fim do arquivo.
+2. Atualize a versão do bot: `npm --prefix bot version X.Y.Z --no-git-tag-version`.
+3. Faça o commit `chore(release): vX.Y.Z` e, com o CI verde, o merge do PR.
+4. Na `main` atualizada, crie e envie a tag anotada: `git tag -a vX.Y.Z -m "vX.Y.Z"` e `git push origin vX.Y.Z`.
+5. Publique a Release a partir da tag, com a seção do changelog: `gh release create vX.Y.Z --notes-file notas.md`.
 
 ## Segredos
 
