@@ -1,4 +1,5 @@
 import { opusEstereo } from './sdp.js';
+import { configurarTela } from './tela.js';
 import { aguardarCandidatos, api, novaConexao } from './webrtc.js';
 
 const ESPERA_AGUARDANDO_MS = 3_000;
@@ -18,7 +19,12 @@ const elementos = {
   assistir: $('assistir'),
   senha: $('senha'),
   campoSenha: $('campoSenha'),
+  palco: $('palco'),
+  telaCheia: $('telaCheia'),
+  flutuante: $('flutuante'),
 };
+
+const tela = configurarTela(elementos);
 
 const sala = location.pathname.split('/').filter(Boolean)[1] ?? new URLSearchParams(location.search).get('sala');
 
@@ -118,6 +124,7 @@ async function conectar() {
 
 function mostrarLimite(mensagem) {
   desconectar();
+  tela.fecharJanelaFlutuante();
   querAssistir = false; // não fica tentando de novo sozinho; o botão volta quando a sala estiver ao vivo
   mostrarSelo('aguardando', 'Pausada');
   elementos.detalhe.textContent = 'O limite grátis de transmissão foi atingido.';
@@ -126,6 +133,7 @@ function mostrarLimite(mensagem) {
 
 function mostrarEncerrada() {
   desconectar();
+  tela.fecharJanelaFlutuante();
   mostrarSelo('encerrada', 'Encerrada');
   elementos.detalhe.textContent = 'Obrigado por assistir!';
   mostrarSobreposicao('A transmissão terminou.');
