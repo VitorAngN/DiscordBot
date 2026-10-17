@@ -37,3 +37,6 @@ desktop.ini
 
 # Configuração local do Claude Code
 .claude/
+
+# Pacotes gerados (dotnet publish)
+artefatos/
