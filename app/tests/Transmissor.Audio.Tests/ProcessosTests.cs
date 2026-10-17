@@ -23,6 +23,22 @@ public class ProcessosTests
     }
 
     [Fact]
+    public void ArvoreIncluiTodosOsDescendentesEMaisNada()
+    {
+        InfoDeProcesso[] processos =
+        [
+            new(1, 0, "Update.exe"),
+            new(10, 1, "Discord.exe"),
+            new(11, 10, "Discord.exe"),
+            new(12, 11, "Discord.exe"), // neto: também tem de sair
+            new(20, 1, "jogo.exe"),
+            new(0, 0, "System Idle Process"), // é pai de si mesmo: não pode travar
+        ];
+
+        Assert.Equal(new HashSet<uint> { 10, 11, 12 }, Processos.Arvore(processos, 10));
+    }
+
+    [Fact]
     public void SemDiscordAbertoDevolveNulo()
     {
         InfoDeProcesso[] processos = [new(1, 0, "explorer.exe"), new(20, 1, "jogo.exe")];

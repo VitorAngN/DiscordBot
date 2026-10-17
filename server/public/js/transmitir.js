@@ -124,9 +124,10 @@ async function capturarTela(qualidade) {
         frameRate: { ideal: qualidade.fps, max: qualidade.fps },
         ...(dentroDoApp && { displaySurface: 'window' }),
       },
-      // No app, o som do navegador fica de fora: quem captura é o app, só do jogo
+      // No app, o som do navegador fica de fora: quem captura é o app, sem o Discord.
+      // No navegador, só o som de uma aba: o do PC inteiro levaria junto a call do Discord.
       audio: dentroDoApp ? false : { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      systemAudio: dentroDoApp ? 'exclude' : 'include',
+      systemAudio: 'exclude',
       selfBrowserSurface: 'exclude',
     });
     midia.getVideoTracks()[0].contentHint = 'motion'; // prioriza fluidez, como em jogo

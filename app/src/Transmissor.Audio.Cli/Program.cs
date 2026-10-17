@@ -11,6 +11,10 @@ const string Ajuda = """
       captura-audio janelas
           Lista as janelas abertas e o processo de cada uma.
 
+      captura-audio sessoes
+          Lista os programas com som aberto e diz quais o modo "sem Discord" deixa de fora.
+          Serve para conferir que o som do Discord nunca entra.
+
       captura-audio gravar <alvo> [--segundos N] [--saida arquivo.wav | --saida -]
           Alvo (escolha um):
             --janela "texto"   só o som do programa cuja janela tem esse texto no título
@@ -36,6 +40,7 @@ try
     return args[0] switch
     {
         "janelas" => ListarJanelas(),
+        "sessoes" => ListarSessoes(),
         "gravar" => await GravarAsync(LerOpcoes(args[1..])),
         _ => throw new ErroDeUso($"Comando desconhecido: {args[0]}"),
     };
@@ -61,6 +66,34 @@ static int ListarJanelas()
         Console.WriteLine($"{j.ProcessId,7}  {Cortar(j.NomeDoProcesso, 24),-24} {Cortar(j.Titulo, 60)}");
     }
     Console.WriteLine($"\n{janelas.Count} janela(s).");
+    return 0;
+}
+
+static int ListarSessoes()
+{
+    var sessoes = SessoesDeAudio.Listar();
+    Console.WriteLine($"{"PID",7}  {"Programa",-24} {"Tocando",-8} No modo sem Discord");
+    foreach (var s in sessoes)
+    {
+        Console.WriteLine($"{s.ProcessId,7}  {Cortar(s.Programa, 24),-24} {(s.Tocando ? "sim" : "não"),-8} {(s.FicaDeForaSemDiscord ? "fica de fora" : "entra")}");
+    }
+
+    // O Discord tem de estar todo dentro da árvore excluída; se não, a call vazaria
+    var vazando = sessoes.Where(s => s.Programa.StartsWith("Discord", StringComparison.OrdinalIgnoreCase) && !s.FicaDeForaSemDiscord).ToList();
+    Console.WriteLine();
+    if (!sessoes.Any(s => s.Programa.StartsWith("Discord", StringComparison.OrdinalIgnoreCase)))
+    {
+        Console.WriteLine("O Discord não tem som aberto agora (entre numa call para conferir).");
+    }
+    else if (vazando.Count == 0)
+    {
+        Console.WriteLine("OK: todo o som do Discord fica de fora no modo sem Discord.");
+    }
+    else
+    {
+        Console.WriteLine($"ATENÇÃO: {vazando.Count} som(ns) do Discord fora da árvore excluída (PID {string.Join(", ", vazando.Select(s => s.ProcessId))}).");
+        return 1;
+    }
     return 0;
 }
 

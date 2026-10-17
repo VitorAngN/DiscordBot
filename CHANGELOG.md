@@ -21,6 +21,11 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - **App transmissor** (`app/src/Transmissor.App`): abre a página de transmitir do servidor num WebView2, pega a imagem da janela escolhida e envia só o som do programa dono dela, sem a call do Discord. Se não der para saber o dono da janela, pergunta de qual programa é o som.
 - Trocar a janela durante a transmissão, sem derrubar a sala (no app, o som troca junto), e mudar o modo de som ao vivo.
 - Tela cheia e janela flutuante também na prévia de quem transmite.
+- Comando `captura-audio sessoes`, que lista quem tem som aberto e confere que todo o som do Discord fica de fora.
+
+### Corrigido
+
+- O som do Discord nunca entra na transmissão. No app, "tudo menos o Discord" passa a ser o padrão, e um modo desconhecido ou a janela do próprio Discord também caem nele. No navegador, a página não pega mais o som do PC inteiro, só o de uma aba.
 
 ## [0.1.0] - 2026-10-17
 
