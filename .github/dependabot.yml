@@ -10,6 +10,16 @@ updates:
       discord:
         patterns: ["discord.js", "@discordjs/*", "@snazzah/davey"]
 
+  - package-ecosystem: npm
+    directory: /server
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: build(server)
+    groups:
+      cloudflare:
+        patterns: ["wrangler", "@cloudflare/*"]
+
   - package-ecosystem: nuget
     directory: /app
     schedule:
