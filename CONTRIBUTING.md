@@ -52,7 +52,7 @@ O projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/) (`MAJOR
 Como a `main` só recebe mudanças por PR, a preparação da versão entra no PR que fecha a fase (ou num PR `chore/release-vX.Y.Z`):
 
 1. Mova as entradas de `[Unreleased]` no `CHANGELOG.md` para a nova versão, com a data, e atualize os links no fim do arquivo.
-2. Atualize a versão do bot (`npm --prefix bot version X.Y.Z --no-git-tag-version`) e a do app (`<Version>` em `app/Directory.Build.props`).
+2. Atualize as versões: bot e servidor (`npm --prefix bot version X.Y.Z --no-git-tag-version`, idem com `server`) e app (`<Version>` em `app/Directory.Build.props`).
 3. Faça o commit `chore(release): vX.Y.Z` e, com o CI verde, o merge do PR.
 4. Na `main` atualizada, crie e envie a tag anotada: `git tag -a vX.Y.Z -m "vX.Y.Z"` e `git push origin vX.Y.Z`.
 5. Publique a Release a partir da tag, com a seção do changelog: `gh release create vX.Y.Z --notes-file notas.md`.
