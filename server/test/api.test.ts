@@ -3,6 +3,7 @@ import { tratarApi, type Dependencias } from '../src/api';
 import type { DadosDaSala, RepositorioDeSalas } from '../src/salas';
 import type { ClienteSfu } from '../src/sfu';
 import type { MedidorDeUso } from '../src/uso';
+import { taxaPorEspectador } from '../public/js/qualidade.js';
 
 const ORIGEM = 'https://transmissao.exemplo.workers.dev';
 const CHAVE = 'chave-de-teste';
@@ -31,7 +32,7 @@ function sfuFalso() {
 function medidorFalso() {
   let total = 0;
   return {
-    iniciar: vi.fn(async (_sessao: string) => {}),
+    iniciar: vi.fn(async (_sessao: string, _taxa: number) => {}),
     presenca: vi.fn(async (_sessao: string) => total),
     total: vi.fn(async () => total),
     definirTotal: (bytes: number) => void (total = bytes),
@@ -102,7 +103,16 @@ describe('criar sala', () => {
     expect(link).toBe(`${ORIGEM}/s/${sala}`);
     expect(token.length).toBeGreaterThan(30);
     const info = await corpo(await pedir('GET', `/api/salas/${sala}`));
-    expect(info).toEqual({ titulo: 'Minecraft', estado: 'aguardando', publicacao: null, inicio: null });
+    expect(info).toEqual({ titulo: 'Minecraft', qualidade: '720p · 60 fps', estado: 'aguardando', publicacao: null, inicio: null });
+  });
+
+  it('guarda a qualidade escolhida e recusa qualidades fora da lista', async () => {
+    const criar = (qualidade: unknown) => pedir('POST', '/api/salas', { token: CHAVE, corpo: { qualidade } });
+
+    const { sala } = await corpo(await criar('1080p30'));
+    expect((await corpo(await pedir('GET', `/api/salas/${sala}`))).qualidade).toBe('1080p · 30 fps');
+    expect((await criar('4k')).status).toBe(400);
+    expect((await criar(1080)).status).toBe(400);
   });
 
   it('usa um título padrão e não guarda o token em texto', async () => {
@@ -286,7 +296,7 @@ describe('trava de uso', () => {
     await colocarAoVivo(sala, token);
     await pedir('POST', `/api/salas/${sala}/assistir`);
 
-    expect(uso.iniciar).toHaveBeenCalledWith('sessao-2');
+    expect(uso.iniciar).toHaveBeenCalledWith('sessao-2', taxaPorEspectador('720p60'));
     const presenca = await corpo(await pedir('POST', `/api/salas/${sala}/assistir/sessao-2/presenca`));
     expect(presenca).toEqual({ continuar: true, motivo: null, publicacao: 1 });
     expect(uso.presenca).toHaveBeenCalledWith('sessao-2');
