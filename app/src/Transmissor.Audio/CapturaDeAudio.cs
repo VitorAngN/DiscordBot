@@ -68,7 +68,8 @@ public sealed class CapturaDeAudio : IAsyncDisposable
             .WithProcessLoopback(processId, modoWasapi)
             .WithFormat(Formato)
             .WithBufferLength(20)
-            .BuildAsync();
+            .BuildAsync()
+            .ConfigureAwait(false);
         return new CapturaDeAudio(gravador);
     }
 
@@ -76,7 +77,8 @@ public sealed class CapturaDeAudio : IAsyncDisposable
     {
         relogio.Start();
         gravador.StartRecording();
-        tarefaDeSilencio = PreencherSilencioAsync(cancelamento.Token);
+        // Fora da thread de quem chamou (num app com janela, seria a da interface)
+        tarefaDeSilencio = Task.Run(() => PreencherSilencioAsync(cancelamento.Token));
     }
 
     /// <summary>Para a captura. Depois disso, nenhum <see cref="Dados"/> é disparado.</summary>
@@ -88,13 +90,13 @@ public sealed class CapturaDeAudio : IAsyncDisposable
             if (encerrada) return;
             encerrada = true;
         }
-        await cancelamento.CancelAsync();
-        if (tarefaDeSilencio is not null) await tarefaDeSilencio;
-        await gravador.DisposeAsync();
+        await cancelamento.CancelAsync().ConfigureAwait(false);
+        if (tarefaDeSilencio is not null) await tarefaDeSilencio.ConfigureAwait(false);
+        await gravador.DisposeAsync().ConfigureAwait(false);
         cancelamento.Dispose();
     }
 
-    public async ValueTask DisposeAsync() => await PararAsync();
+    public async ValueTask DisposeAsync() => await PararAsync().ConfigureAwait(false);
 
     void AoReceber(ReadOnlySpan<byte> buffer, AudioClientBufferFlags flags, long posicao, long qpc)
     {
@@ -111,7 +113,7 @@ public sealed class CapturaDeAudio : IAsyncDisposable
         using var timer = new PeriodicTimer(IntervaloDeSilencio);
         try
         {
-            while (await timer.WaitForNextTickAsync(ct))
+            while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
             {
                 lock (trava)
                 {

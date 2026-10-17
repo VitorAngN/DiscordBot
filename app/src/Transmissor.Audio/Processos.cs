@@ -61,6 +61,26 @@ public static unsafe class Processos
     }
 
     /// <summary>
+    /// Janela indicada pelo rótulo da faixa de vídeo de uma captura de tela do Chromium
+    /// (Chrome, Edge, WebView2), que tem o formato <c>window:&lt;HWND&gt;:0</c>.
+    /// Devolve <c>null</c> para captura de tela inteira ou rótulo em outro formato.
+    /// </summary>
+    public static nint? JanelaDoRotulo(string? rotulo)
+    {
+        if (rotulo is null || !rotulo.StartsWith("window:", StringComparison.Ordinal)) return null;
+        var partes = rotulo.Split(':');
+        return partes.Length >= 2 && long.TryParse(partes[1], out var handle) && handle > 0 ? (nint)handle : null;
+    }
+
+    /// <summary>Processo dono da janela, ou <c>null</c> se ela não existir mais.</summary>
+    public static uint? ProcessoDaJanela(nint janela)
+    {
+        if (janela == 0 || !Nativo.IsWindow(janela)) return null;
+        var pid = ProcessoDe(janela);
+        return pid == 0 ? null : pid;
+    }
+
+    /// <summary>
     /// Processo principal do Discord, ou <c>null</c> se ele não estiver aberto.
     /// Excluir a árvore desse processo tira da captura todo o som da call.
     /// </summary>
