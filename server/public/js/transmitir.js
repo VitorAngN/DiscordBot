@@ -1,5 +1,7 @@
+import { dentroDoApp, iniciarAudio, pararAudio, prepararAudio, trocarSom } from './ponte-app.js';
 import { QUALIDADE_PADRAO, QUALIDADES, TAXA_AUDIO, qualidadeValida, taxaPorEspectador } from './qualidade.js';
 import { opusEstereo } from './sdp.js';
+import { configurarTela } from './tela.js';
 import { aguardarCandidatos, aguardarConexao, api, novaConexao } from './webrtc.js';
 
 const CHAVE_SALVA = 'discordbot:chave';
@@ -16,16 +18,41 @@ const elementos = {
   link: $('link'),
   copiar: $('copiar'),
   parar: $('parar'),
+  trocar: $('trocar'),
   status: $('status'),
   selo: $('selo'),
   previa: $('previa'),
   uso: $('uso'),
   qualidade: $('qualidade'),
   dicaQualidade: $('dicaQualidade'),
+  tituloPagina: $('tituloPagina'),
+  subtitulo: $('subtitulo'),
+  campoSom: $('campoSom'),
+  modoSom: $('modoSom'),
+  campoSomAoVivo: $('campoSomAoVivo'),
+  modoSomAoVivo: $('modoSomAoVivo'),
+  dicaNavegador: $('dicaNavegador'),
 };
 
-/** Transmissão atual: { sala, token, pc, midia, relogioDeUso } */
+configurarTela({ palco: $('palco'), video: elementos.previa, telaCheia: $('telaCheia'), flutuante: $('flutuante') });
+
+/**
+ * Transmissão atual: { sala, token, pc, midia, qualidade, enviaVideo, enviaAudio, programa, relogioDeUso }.
+ * `midia` é o que está sendo capturado agora; muda ao trocar de janela.
+ */
 let atual = null;
+
+/** Dentro do app, o som vem do app (só o jogo), não do navegador. */
+function configurarModoApp() {
+  document.title = 'Transmitir';
+  elementos.tituloPagina.textContent = 'Transmitir';
+  elementos.subtitulo.textContent = 'Escolha a janela do jogo. O som vem só desse programa: a call do Discord não entra.';
+  elementos.campoSom.hidden = false;
+  elementos.campoSomAoVivo.hidden = false;
+  elementos.dicaNavegador.hidden = true;
+  elementos.iniciar.textContent = 'Escolher a janela do jogo';
+  elementos.trocar.textContent = '🔄 Trocar janela';
+}
 
 const emGb = (bytes) => (bytes / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
 
@@ -87,6 +114,48 @@ function mostrarDicaDeQualidade() {
   elementos.dicaQualidade.textContent = `Cada amigo assistindo gasta até ~${gbPorHora.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} GB da cota grátis por hora. Mais qualidade também pede mais upload da sua internet.`;
 }
 
+/** Abre o seletor do navegador. Devolve `null` se a pessoa cancelar. */
+async function capturarTela(qualidade) {
+  try {
+    const midia = await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        width: { max: qualidade.largura },
+        height: { max: qualidade.altura },
+        frameRate: { ideal: qualidade.fps, max: qualidade.fps },
+        ...(dentroDoApp && { displaySurface: 'window' }),
+      },
+      // No app, o som do navegador fica de fora: quem captura é o app, só do jogo
+      audio: dentroDoApp ? false : { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      systemAudio: dentroDoApp ? 'exclude' : 'include',
+      selfBrowserSurface: 'exclude',
+    });
+    midia.getVideoTracks()[0].contentHint = 'motion'; // prioriza fluidez, como em jogo
+    return midia;
+  } catch {
+    return null;
+  }
+}
+
+/** Se o navegador capturou maior que o teto (ex.: monitor 4K), quanto reduzir no envio. */
+function reducaoPara(video, qualidade) {
+  const { width = qualidade.largura, height = qualidade.altura } = video.getSettings();
+  return Math.max(1, width / qualidade.largura, height / qualidade.altura);
+}
+
+/** Termina a transmissão se a pessoa parar de compartilhar a janela que está no ar. */
+function vigiarFim(video) {
+  video.addEventListener('ended', () => {
+    if (atual?.midia.getVideoTracks()[0] === video) encerrar();
+  });
+}
+
+function mostrarAoVivo() {
+  const { qualidade, programa, enviaAudio } = atual;
+  if (programa) mostrarStatus(`Ao vivo em ${qualidade.nome}, com o som de: ${programa}.`);
+  else if (enviaAudio?.track) mostrarStatus(`Ao vivo com vídeo e som, em ${qualidade.nome}.`);
+  else mostrarStatus(`Ao vivo em ${qualidade.nome}, mas sem som: para ter som, compartilhe uma aba com o som ligado.`);
+}
+
 async function iniciar() {
   const chave = elementos.chave.value.trim();
   guardarChave(chave);
@@ -98,33 +167,31 @@ async function iniciar() {
     // Só não lembra
   }
   elementos.iniciar.disabled = true;
-  mostrarStatus('Escolha a janela ou aba para transmitir…');
+  mostrarStatus(dentroDoApp ? 'Escolha a janela do jogo…' : 'Escolha a janela ou aba para transmitir…');
+  // Ainda no clique: sem ele, o áudio que vem do app pode ficar pausado
+  if (dentroDoApp) prepararAudio();
 
-  let midia;
-  try {
-    midia = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        width: { max: qualidade.largura },
-        height: { max: qualidade.altura },
-        frameRate: { ideal: qualidade.fps, max: qualidade.fps },
-      },
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      systemAudio: 'include',
-      selfBrowserSurface: 'exclude',
-    });
-  } catch {
+  const midia = await capturarTela(qualidade);
+  if (!midia) {
+    if (dentroDoApp) pararAudio();
     elementos.iniciar.disabled = false;
     mostrarStatus('Nada foi escolhido para transmitir.');
     return;
   }
 
   const [video] = midia.getVideoTracks();
-  const [audio] = midia.getAudioTracks();
-  video.contentHint = 'motion'; // prioriza fluidez, como em jogo
+  let [audio] = midia.getAudioTracks();
   elementos.previa.srcObject = midia;
-  atual = { sala: null, token: null, pc: null, midia };
+  atual = { sala: null, token: null, pc: null, midia, qualidade, programa: null };
 
   try {
+    if (dentroDoApp) {
+      mostrarStatus('Preparando o som do jogo…');
+      elementos.modoSomAoVivo.value = elementos.modoSom.value;
+      const quandoParar = (motivo) => mostrarStatus(`${motivo} Use "Trocar janela" para tentar de novo.`, 'erro');
+      ({ faixa: audio, programa: atual.programa } = await iniciarAudio(video.label, elementos.modoSom.value, quandoParar));
+    }
+
     mostrarStatus('Criando a sala…');
     const titulo = elementos.titulo.value.trim();
     const { sala, link, token } = await api('/api/salas', {
@@ -135,21 +202,20 @@ async function iniciar() {
     const pc = novaConexao();
     Object.assign(atual, { sala, token, pc });
 
-    // Se o navegador capturou maior que o teto (ex.: monitor 4K), reduz no envio
-    const { width = qualidade.largura, height = qualidade.altura } = video.getSettings();
-    const reducao = Math.max(1, width / qualidade.largura, height / qualidade.altura);
-    const faixas = [
-      {
-        trackName: 'video',
-        transceptor: pc.addTransceiver(video, {
-          direction: 'sendonly',
-          sendEncodings: [
-            { maxBitrate: qualidade.taxaVideo, maxFramerate: qualidade.fps, scaleResolutionDownBy: reducao },
-          ],
-        }),
-      },
-    ];
-    if (audio) faixas.push({ trackName: 'audio', transceptor: pc.addTransceiver(audio, { direction: 'sendonly' }) });
+    const faixas = [];
+    const transceptorDeVideo = pc.addTransceiver(video, {
+      direction: 'sendonly',
+      sendEncodings: [
+        { maxBitrate: qualidade.taxaVideo, maxFramerate: qualidade.fps, scaleResolutionDownBy: reducaoPara(video, qualidade) },
+      ],
+    });
+    faixas.push({ trackName: 'video', transceptor: transceptorDeVideo });
+    atual.enviaVideo = transceptorDeVideo.sender;
+    if (audio) {
+      const transceptorDeAudio = pc.addTransceiver(audio, { direction: 'sendonly' });
+      faixas.push({ trackName: 'audio', transceptor: transceptorDeAudio });
+      atual.enviaAudio = transceptorDeAudio.sender;
+    }
 
     await pc.setLocalDescription(await pc.createOffer());
     await aguardarCandidatos(pc);
@@ -174,14 +240,9 @@ async function iniciar() {
     elementos.aoVivo.hidden = false;
     elementos.formulario.hidden = true;
     mostrarSelo('ao-vivo', '● AO VIVO');
-    mostrarStatus(
-      audio
-        ? `Ao vivo com vídeo e som, em ${qualidade.nome}.`
-        : `Ao vivo em ${qualidade.nome}, mas sem som: para ter som, compartilhe uma aba com o som ligado.`,
-    );
+    mostrarAoVivo();
 
-    // O usuário clicou em "Parar de compartilhar" na barra do navegador
-    video.addEventListener('ended', () => encerrar());
+    vigiarFim(video);
     pc.addEventListener('connectionstatechange', () => {
       if (pc.connectionState === 'failed') mostrarStatus('A conexão com o servidor de vídeo caiu. Encerre e comece de novo.', 'erro');
     });
@@ -191,12 +252,76 @@ async function iniciar() {
   }
 }
 
+/**
+ * Troca a janela (ou aba) no ar, sem derrubar a sala: só a imagem que sai é substituída,
+ * e quem assiste nem precisa recarregar. No app, o som passa a vir do programa da nova janela.
+ */
+async function trocarJanela() {
+  if (!atual?.enviaVideo) return;
+  const transmissao = atual;
+  elementos.trocar.disabled = true;
+  try {
+    const nova = await capturarTela(transmissao.qualidade);
+    if (!nova || atual !== transmissao) {
+      nova?.getTracks().forEach((t) => t.stop());
+      mostrarAoVivo();
+      return;
+    }
+    const [video] = nova.getVideoTracks();
+    const [audio] = nova.getAudioTracks();
+
+    await transmissao.enviaVideo.replaceTrack(video);
+    const parametros = transmissao.enviaVideo.getParameters();
+    if (parametros.encodings?.[0]) {
+      parametros.encodings[0].scaleResolutionDownBy = reducaoPara(video, transmissao.qualidade);
+      await transmissao.enviaVideo.setParameters(parametros);
+    }
+
+    if (dentroDoApp) {
+      mostrarStatus('Trocando o som para o programa da nova janela…');
+      transmissao.programa = await trocarSom(video.label, elementos.modoSomAoVivo.value);
+    } else if (audio && transmissao.enviaAudio) {
+      await transmissao.enviaAudio.replaceTrack(audio);
+    }
+
+    const antiga = transmissao.midia;
+    transmissao.midia = nova;
+    antiga.getTracks().forEach((t) => t.stop());
+    elementos.previa.srcObject = nova;
+    vigiarFim(video);
+
+    if (!dentroDoApp && !transmissao.enviaAudio && audio) {
+      mostrarStatus('Janela trocada. O som da nova aba só entra se a transmissão já começou com som: encerre e comece de novo.');
+    } else {
+      mostrarAoVivo();
+    }
+  } catch (erro) {
+    mostrarStatus(`Não deu para trocar: ${erro.message}`, 'erro');
+  } finally {
+    elementos.trocar.disabled = false;
+  }
+}
+
+/** No app: troca o modo do som (só o jogo ou tudo menos o Discord) sem parar. */
+async function trocarModoDeSom() {
+  if (!dentroDoApp || !atual?.enviaVideo) return;
+  const video = atual.midia.getVideoTracks()[0];
+  try {
+    mostrarStatus('Trocando o som…');
+    atual.programa = await trocarSom(video.label, elementos.modoSomAoVivo.value);
+    mostrarAoVivo();
+  } catch (erro) {
+    mostrarStatus(`Não deu para trocar o som: ${erro.message}`, 'erro');
+  }
+}
+
 async function encerrar({ manterStatus = false } = {}) {
   const transmissao = atual;
   atual = null;
   if (transmissao) {
     clearInterval(transmissao.relogioDeUso);
     transmissao.midia.getTracks().forEach((t) => t.stop());
+    if (dentroDoApp) pararAudio();
     transmissao.pc?.close();
     if (transmissao.sala) {
       await api(`/api/salas/${transmissao.sala}`, { metodo: 'DELETE', token: transmissao.token }).catch(() => {});
@@ -215,6 +340,8 @@ elementos.formulario.addEventListener('submit', (evento) => {
   iniciar();
 });
 elementos.parar.addEventListener('click', () => encerrar());
+elementos.trocar.addEventListener('click', () => trocarJanela());
+elementos.modoSomAoVivo.addEventListener('change', () => trocarModoDeSom());
 elementos.copiar.addEventListener('click', async () => {
   await navigator.clipboard.writeText(elementos.link.textContent);
   elementos.copiar.textContent = 'Copiado!';
@@ -230,6 +357,7 @@ window.addEventListener('pagehide', () => {
   });
 });
 
+if (dentroDoApp) configurarModoApp();
 montarQualidades();
 elementos.qualidade.addEventListener('change', mostrarDicaDeQualidade);
 

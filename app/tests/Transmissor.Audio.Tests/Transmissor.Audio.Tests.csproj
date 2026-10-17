@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Transmissor.Audio\Transmissor.Audio.csproj" />
+    <ProjectReference Include="..\..\src\Transmissor.App\Transmissor.App.csproj" />
   </ItemGroup>
 
 </Project>

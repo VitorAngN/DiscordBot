@@ -23,7 +23,7 @@ Só o som do jogo é capturado, então a voz da call não volta para a transmiss
 | Pasta | O que é | Estado |
 |---|---|---|
 | [`bot/`](bot/README.md) | Bot do Discord (Node.js + discord.js) | Toca áudio na call |
-| [`app/`](app/README.md) | App transmissor para Windows (C# + WebView2) | Captura o som do jogo |
+| [`app/`](app/README.md) | App transmissor para Windows (C# + WebView2) | Transmite a janela do jogo, só com o som dele |
 | [`server/`](server/README.md) | Servidor de transmissão (Cloudflare Workers) | Salas e página de assistir |
 | `docs/` | Plano e documentação | — |
 

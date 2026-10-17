@@ -65,6 +65,10 @@ Pronto: abra `https://discordbot-transmissao.<seu-subdominio>.workers.dev/transm
 2. Escolha uma **aba** com som (um vídeo do YouTube, por exemplo). Pelo navegador, compartilhar a tela inteira com som também pega a voz da call do Discord; o app do Windows resolve isso capturando só o jogo.
 3. Copie o link e abra em outro aparelho (ou mande para um amigo). Clique em **▶ Assistir**.
 
+Durante a transmissão, **🔄 Trocar o que transmitir** troca a aba ou janela sem derrubar a sala; quem assiste não precisa recarregar.
+
+Aberta dentro do [app do Windows](../app/README.md), a mesma página entra no **modo app**: ela pega só a imagem da janela, e o som vem do app, só do programa do jogo, sem a call do Discord.
+
 Na página de assistir, use **⛶ Tela cheia** (ou duplo clique, ou a tecla F) e **🗗 Janela flutuante** (ou a tecla P). A janela flutuante fica por cima de tudo e dá para mover e redimensionar. Para ver na TV, use o **Transmitir…** do próprio Chrome (menu ⋮).
 
 ### Qualidades
@@ -147,6 +151,8 @@ A contagem depende da página de assistir do próprio servidor. Uma página modi
 | `src/sfu.ts` | Cliente da API do Realtime SFU |
 | `src/uso.ts` | Trava de uso: estimativa por presença e soma dos últimos 31 dias |
 | `public/js/qualidade.js` | Qualidades de transmissão, usadas pela página e pelo servidor |
-| `public/js/tela.js` | Tela cheia e janela flutuante da página de assistir |
+| `public/js/tela.js` | Tela cheia e janela flutuante (páginas de assistir e de transmitir) |
+| `public/js/ponte-app.js` | Modo app: recebe do app do Windows o som só do jogo |
+| `public/js/fila-audio.js`, `ponte-audio.worklet.js` | Fila e AudioWorklet que tocam esse som na transmissão |
 | `public/` | Páginas de assistir e de transmitir |
 | `test/` | Testes (Vitest) |
