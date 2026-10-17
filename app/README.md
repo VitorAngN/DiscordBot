@@ -36,8 +36,10 @@ dotnet run --project app/src/Transmissor.App
 Na primeira vez, o app pede o **endereço do seu servidor** (o que apareceu no `npm run deploy`). Depois é só:
 
 1. Digitar a chave de transmissão, o título e a qualidade.
-2. Em **Som**, deixar **Só o programa da janela escolhida**.
+2. Em **Som**, deixar **Todo o som do PC, menos o Discord** (o padrão).
 3. Clicar em **Escolher a janela do jogo** e escolher a janela.
+
+> Para o Discord ficar de fora, transmita **pelo app**. A página aberta num navegador comum só consegue o som de uma aba.
 
 O menu do app tem **Servidor…** (trocar o endereço), **Recarregar** (F5) e **Abrir registro**, um arquivo com o que o app fez. Ele ajuda a entender problemas e fica em `%LocalAppData%\DiscordBot\transmissor.log`.
 
@@ -77,9 +79,19 @@ O áudio sai sempre em PCM 16 bits, 48 kHz, estéreo, o formato usado pelo Opus 
 
 ### Qual modo de som usar
 
-- **Só o jogo** é o recomendado: nada além do jogo entra na transmissão.
-- **Tudo menos o Discord** serve para transmitir vários programas juntos. Ele só exclui o app do Discord: se você usa o Discord pelo navegador, a call entra na captura. Nesse caso, use "só o jogo".
-- Se você escolher a **tela inteira** em vez de uma janela, o app usa "tudo menos o Discord", porque a tela não tem um programa só.
+A regra do app é: **o som do Discord nunca entra**.
+
+- **Tudo menos o Discord** (padrão): entra qualquer som do PC, do jogo ou de outros programas, menos o do Discord. Ele exclui o processo principal do Discord e todos os processos filhos, que são de onde sai o som da call. Funciona com o app do Discord; se você usa o Discord **pelo navegador**, a call sai do navegador e entra na captura. Nesse caso, use "só o programa".
+- **Só o programa da janela:** entra só o som do programa da janela escolhida. Se essa janela for do próprio Discord, o app volta para "tudo menos o Discord".
+- Na **tela inteira**, o app sempre usa "tudo menos o Discord".
+
+Para conferir no seu PC que o som do Discord fica de fora, entre numa call e rode:
+
+```bash
+dotnet run --project app/src/Transmissor.Audio.Cli -- sessoes
+```
+
+Ele lista quem tem som aberto e mostra "OK" quando todo o som do Discord fica de fora.
 
 ## Estrutura
 
