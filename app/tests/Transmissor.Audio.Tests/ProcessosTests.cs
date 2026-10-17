@@ -52,6 +52,44 @@ public class ProcessosTests
         }
     }
 
+    [Theory]
+    [InlineData("window:197346:0", 197346)]
+    [InlineData("window:42:1", 42)]
+    public void LeAJanelaDoRotuloDaCaptura(string rotulo, long esperado)
+    {
+        Assert.Equal((nint)esperado, Processos.JanelaDoRotulo(rotulo));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("screen:0:0")]
+    [InlineData("web-contents-media-stream://12:3")]
+    [InlineData("window:abc:0")]
+    [InlineData("window:0:0")]
+    [InlineData("Minecraft 1.21")]
+    public void RotuloSemJanelaDevolveNulo(string? rotulo)
+    {
+        Assert.Null(Processos.JanelaDoRotulo(rotulo));
+    }
+
+    [Fact]
+    public void JanelaInexistenteNaoTemProcesso()
+    {
+        Assert.Null(Processos.ProcessoDaJanela(0));
+        Assert.Null(Processos.ProcessoDaJanela(unchecked((nint)0x7FFF_FFF0)));
+    }
+
+    [Fact]
+    public void AchaOProcessoDonoDeUmaJanelaAberta()
+    {
+        // Sem janelas (ex.: CI sem área de trabalho) não há o que conferir
+        foreach (var janela in Processos.ListarJanelas().Take(5))
+        {
+            Assert.Equal(janela.ProcessId, Processos.ProcessoDaJanela(janela.Handle));
+        }
+    }
+
     [Fact]
     public void ListarJanelasNaoIncluiEsteProcesso()
     {
