@@ -6,6 +6,32 @@ import { aguardarCandidatos, aguardarConexao, api, novaConexao } from './webrtc.
 
 const CHAVE_SALVA = 'discordbot:chave';
 const QUALIDADE_SALVA = 'discordbot:qualidade';
+const NOME_SALVO = 'discordbot:nome';
+const AVISAR_SALVO = 'discordbot:avisar';
+/** Sinal de vida para o servidor: sem ele por 2 minutos, a sala encerra sozinha. */
+const INTERVALO_DE_SINAL_MS = 20_000;
+
+const TEXTO_DO_AVISO = {
+  publicado: 'Aviso postado no Discord.',
+  'nao-configurado': 'O servidor não tem o bot configurado para avisar no Discord: mande o link você mesmo.',
+  falhou: 'Não deu para postar o aviso no Discord: mande o link você mesmo.',
+};
+
+function lerSalvo(chave) {
+  try {
+    return localStorage.getItem(chave);
+  } catch {
+    return null;
+  }
+}
+
+function salvar(chave, valor) {
+  try {
+    localStorage.setItem(chave, valor);
+  } catch {
+    // Só não lembra
+  }
+}
 
 const $ = (id) => document.getElementById(id);
 const elementos = {
@@ -13,6 +39,8 @@ const elementos = {
   chave: $('chave'),
   lembrar: $('lembrar'),
   titulo: $('titulo'),
+  nome: $('nome'),
+  avisar: $('avisar'),
   iniciar: $('iniciar'),
   aoVivo: $('aoVivo'),
   link: $('link'),
@@ -151,10 +179,27 @@ function vigiarFim(video) {
 }
 
 function mostrarAoVivo() {
-  const { qualidade, programa, enviaAudio } = atual;
-  if (programa) mostrarStatus(`Ao vivo em ${qualidade.nome}, com o som de: ${programa}.`);
-  else if (enviaAudio?.track) mostrarStatus(`Ao vivo com vídeo e som, em ${qualidade.nome}.`);
-  else mostrarStatus(`Ao vivo em ${qualidade.nome}, mas sem som: para ter som, compartilhe uma aba com o som ligado.`);
+  const { qualidade, programa, enviaAudio, situacaoDoAviso } = atual;
+  let texto;
+  if (programa) texto = `Ao vivo em ${qualidade.nome}, com o som de: ${programa}.`;
+  else if (enviaAudio?.track) texto = `Ao vivo com vídeo e som, em ${qualidade.nome}.`;
+  else texto = `Ao vivo em ${qualidade.nome}, mas sem som: para ter som, compartilhe uma aba com o som ligado.`;
+  const aviso = TEXTO_DO_AVISO[situacaoDoAviso];
+  mostrarStatus(aviso ? `${texto} ${aviso}` : texto);
+}
+
+/** Manda o sinal de vida; se o servidor já tiver encerrado a sala, encerra aqui também. */
+function vigiarSinal(sala, token) {
+  return setInterval(async () => {
+    try {
+      await api(`/api/salas/${sala}/sinal`, { metodo: 'POST', token });
+    } catch (erro) {
+      if (erro.status === 410 && atual?.sala === sala) {
+        mostrarStatus('O servidor encerrou a transmissão: ficou mais de 2 minutos sem sinal deste PC.', 'erro');
+        encerrar({ manterStatus: true });
+      }
+    }
+  }, INTERVALO_DE_SINAL_MS);
 }
 
 async function iniciar() {
@@ -195,10 +240,14 @@ async function iniciar() {
 
     mostrarStatus('Criando a sala…');
     const titulo = elementos.titulo.value.trim();
+    const nome = elementos.nome.value.trim();
+    const avisar = elementos.avisar.checked;
+    salvar(NOME_SALVO, nome);
+    salvar(AVISAR_SALVO, avisar ? 'sim' : 'nao');
     const { sala, link, token } = await api('/api/salas', {
       metodo: 'POST',
       token: chave,
-      corpo: { titulo, qualidade: idQualidade },
+      corpo: { titulo, qualidade: idQualidade, nome, avisar },
     });
     const pc = novaConexao();
     Object.assign(atual, { sala, token, pc });
@@ -233,7 +282,9 @@ async function iniciar() {
     // Estéreo no envio: o codificador segue o que a resposta do SFU pede
     await pc.setRemoteDescription({ type: 'answer', sdp: opusEstereo(sessionDescription.sdp, TAXA_AUDIO) });
     await aguardarConexao(pc);
-    await api(`/api/salas/${sala}/ao-vivo`, { metodo: 'POST', token });
+    mostrarStatus(avisar ? 'Ficando ao vivo e avisando no Discord…' : 'Ficando ao vivo…');
+    ({ discord: atual.situacaoDoAviso } = await api(`/api/salas/${sala}/ao-vivo`, { metodo: 'POST', token }));
+    atual.relogioDeSinal = vigiarSinal(sala, token);
 
     elementos.link.textContent = link;
     atualizarUso(chave);
@@ -321,6 +372,7 @@ async function encerrar({ manterStatus = false } = {}) {
   atual = null;
   if (transmissao) {
     clearInterval(transmissao.relogioDeUso);
+    clearInterval(transmissao.relogioDeSinal);
     transmissao.midia.getTracks().forEach((t) => t.stop());
     if (dentroDoApp) pararAudio();
     transmissao.pc?.close();
@@ -367,3 +419,5 @@ if (salva) {
   elementos.chave.value = salva;
   elementos.lembrar.checked = true;
 }
+elementos.nome.value = lerSalvo(NOME_SALVO) ?? '';
+elementos.avisar.checked = lerSalvo(AVISAR_SALVO) !== 'nao';

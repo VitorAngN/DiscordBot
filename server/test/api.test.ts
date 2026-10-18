@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tratarApi, type Dependencias } from '../src/api';
-import type { DadosDaSala, RepositorioDeSalas } from '../src/salas';
+import type { Aviso, AvisoNoDiscord } from '../src/discord';
+import { SEM_SINAL_MS, type DadosDaSala, type RepositorioDeSalas } from '../src/salas';
 import type { ClienteSfu } from '../src/sfu';
 import {
   ESTADO_INICIAL,
@@ -58,15 +59,27 @@ function tentativasEmMemoria(): ControleDeTentativas {
 
 const LIMITE = 900;
 
+function discordFalso() {
+  let mensagens = 0;
+  return {
+    publicar: vi.fn(async (_aviso: Aviso) => `msg-${++mensagens}`),
+    encerrar: vi.fn(async (_mensagemId: string, _aviso: Omit<Aviso, 'link'>, _fim: number) => {}),
+  } satisfies AvisoNoDiscord;
+}
+
 let salas: ReturnType<typeof repositorioEmMemoria>;
 let sfu: ReturnType<typeof sfuFalso>;
 let uso: ReturnType<typeof medidorFalso>;
+let discord: ReturnType<typeof discordFalso>;
+let relogio: number;
 let deps: Dependencias;
 
 beforeEach(() => {
   salas = repositorioEmMemoria();
   sfu = sfuFalso();
   uso = medidorFalso();
+  discord = discordFalso();
+  relogio = 1_000;
   deps = {
     salas,
     sfu,
@@ -75,7 +88,8 @@ beforeEach(() => {
     chaveDeAssistir: '',
     limiteDeUso: LIMITE,
     tentativas: tentativasEmMemoria(),
-    agora: () => 1_000,
+    discord,
+    agora: () => relogio,
   };
 });
 
@@ -112,7 +126,7 @@ async function colocarAoVivo(sala: string, token: string) {
     corpo: { sessionDescription: OFERTA, tracks: [{ mid: '0', trackName: 'video' }, { mid: '1', trackName: 'audio' }] },
   });
   expect(publicar.status).toBe(200);
-  expect((await pedir('POST', `/api/salas/${sala}/ao-vivo`, { token })).status).toBe(204);
+  expect((await pedir('POST', `/api/salas/${sala}/ao-vivo`, { token })).status).toBe(200);
 }
 
 describe('criar sala', () => {
@@ -133,7 +147,14 @@ describe('criar sala', () => {
     expect(link).toBe(`${ORIGEM}/s/${sala}`);
     expect(token.length).toBeGreaterThan(30);
     const info = await corpo(await pedir('GET', `/api/salas/${sala}`));
-    expect(info).toEqual({ titulo: 'Minecraft', qualidade: '720p · 60 fps', estado: 'aguardando', publicacao: null, inicio: null });
+    expect(info).toEqual({
+      titulo: 'Minecraft',
+      nome: 'Alguém',
+      qualidade: '720p · 60 fps',
+      estado: 'aguardando',
+      publicacao: null,
+      inicio: null,
+    });
   });
 
   it('guarda a qualidade escolhida e recusa qualidades fora da lista', async () => {
@@ -370,6 +391,115 @@ describe('trava de uso', () => {
       janelaDias: 31,
       atingido: false,
     });
+  });
+});
+
+describe('aviso no Discord', () => {
+  async function criarComo(corpoDaSala: Record<string, unknown>) {
+    const resposta = await pedir('POST', '/api/salas', { token: CHAVE, corpo: corpoDaSala });
+    return (await corpo(resposta)) as { sala: string; token: string };
+  }
+
+  async function aoVivo(sala: string, token: string) {
+    await pedir('POST', `/api/salas/${sala}/publicar`, {
+      token,
+      corpo: { sessionDescription: OFERTA, tracks: [{ mid: '0', trackName: 'video' }] },
+    });
+    return corpo(await pedir('POST', `/api/salas/${sala}/ao-vivo`, { token }));
+  }
+
+  it('ao ficar ao vivo, o bot posta o aviso com o link da sala', async () => {
+    const { sala, token } = await criarComo({ titulo: 'Minecraft', nome: 'Vitor', qualidade: '1080p60' });
+
+    expect(await aoVivo(sala, token)).toEqual({ discord: 'publicado' });
+    expect(discord.publicar).toHaveBeenCalledWith({
+      nome: 'Vitor',
+      titulo: 'Minecraft',
+      qualidade: '1080p · 60 fps',
+      link: `${ORIGEM}/s/${sala}`,
+      inicio: 1_000,
+    });
+    expect(salas.dados.get(sala)?.aviso).toEqual({ mensagemId: 'msg-1', inicio: 1_000 });
+  });
+
+  it('não posta de novo quando quem transmite reconecta', async () => {
+    const { sala, token } = await criarComo({});
+    await aoVivo(sala, token);
+
+    expect(await aoVivo(sala, token)).toEqual({ discord: 'ja-publicado' });
+    expect(discord.publicar).toHaveBeenCalledTimes(1);
+  });
+
+  it('respeita quem desligou o aviso e o servidor sem bot configurado', async () => {
+    const semAviso = await criarComo({ avisar: false });
+    expect(await aoVivo(semAviso.sala, semAviso.token)).toEqual({ discord: 'desligado' });
+
+    deps.discord = null;
+    const semBot = await criarComo({});
+    expect(await aoVivo(semBot.sala, semBot.token)).toEqual({ discord: 'nao-configurado' });
+    expect(discord.publicar).not.toHaveBeenCalled();
+  });
+
+  it('se o Discord falhar, a transmissão fica ao vivo do mesmo jeito', async () => {
+    discord.publicar.mockRejectedValueOnce(new Error('Missing Permissions'));
+    const { sala, token } = await criarComo({});
+
+    expect(await aoVivo(sala, token)).toEqual({ discord: 'falhou' });
+    expect((await corpo(await pedir('GET', `/api/salas/${sala}`))).estado).toBe('ao-vivo');
+  });
+
+  it('ao encerrar, o aviso vira "encerrou"', async () => {
+    const { sala, token } = await criarComo({ nome: 'Vitor', titulo: 'Minecraft' });
+    await aoVivo(sala, token);
+    relogio = 1_000 + 45 * 60_000;
+
+    await pedir('DELETE', `/api/salas/${sala}`, { token });
+
+    expect(discord.encerrar).toHaveBeenCalledWith(
+      'msg-1',
+      { nome: 'Vitor', titulo: 'Minecraft', qualidade: '720p · 60 fps', inicio: 1_000 },
+      relogio,
+    );
+  });
+
+  it('nome e título longos são cortados, e nome vazio vira "Alguém"', async () => {
+    const { sala } = await criarComo({ nome: 'x'.repeat(80), titulo: '   ' });
+
+    expect(salas.dados.get(sala)?.nome).toHaveLength(40);
+    expect(salas.dados.get(sala)?.titulo).toBe('Transmissão');
+    const outra = await criarComo({ nome: '' });
+    expect(salas.dados.get(outra.sala)?.nome).toBe('Alguém');
+  });
+});
+
+describe('sinal de vida de quem transmite', () => {
+  it('só quem criou a sala manda o sinal', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+
+    expect((await pedir('POST', `/api/salas/${sala}/sinal`, { token })).status).toBe(204);
+    expect((await pedir('POST', `/api/salas/${sala}/sinal`, { token: 'outro' })).status).toBe(403);
+  });
+
+  it('com sinal chegando, a sala continua ao vivo', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    for (let i = 0; i < 10; i++) {
+      relogio += 20_000;
+      await pedir('POST', `/api/salas/${sala}/sinal`, { token });
+    }
+
+    expect((await corpo(await pedir('GET', `/api/salas/${sala}`))).estado).toBe('ao-vivo');
+  });
+
+  it('sem sinal por tempo demais, a sala encerra sozinha e o aviso é atualizado', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    relogio += SEM_SINAL_MS + 1;
+
+    expect((await corpo(await pedir('GET', `/api/salas/${sala}`))).estado).toBe('encerrada');
+    expect(discord.encerrar).toHaveBeenCalledTimes(1);
+    expect((await pedir('POST', `/api/salas/${sala}/sinal`, { token })).status).toBe(410);
   });
 });
 
