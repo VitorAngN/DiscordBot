@@ -19,40 +19,45 @@
       </div>
 
       <form class="cartao" id="formulario">
-        <label>
+        <label id="campoChave">
           Chave de transmissão
           <input type="password" id="chave" autocomplete="current-password" required />
         </label>
-        <label class="opcao"><input type="checkbox" id="lembrar" /> Lembrar a chave neste navegador</label>
-        <label>
+        <label class="opcao" id="campoLembrar"><input type="checkbox" id="lembrar" /> Lembrar a chave neste navegador</label>
+        <p class="suave chave-salva" id="chaveSalva" hidden>
+          🔒 Chave de transmissão salva neste PC, protegida pelo Windows.
+          <button type="button" class="botao-link" id="trocarChave">Trocar</button>
+        </p>
+        <label class="metade">
           Título
           <input type="text" id="titulo" maxlength="100" placeholder="Ex.: Minecraft com a galera" />
         </label>
-        <label>
+        <label class="metade">
           Seu nome
           <input type="text" id="nome" maxlength="40" placeholder="Aparece no aviso do Discord" />
         </label>
         <label class="opcao"><input type="checkbox" id="avisar" checked /> Avisar no Discord quando eu ficar ao vivo</label>
-        <label>
+        <label class="metade">
           Qualidade
           <select id="qualidade"></select>
         </label>
-        <p class="suave" id="dicaQualidade"></p>
-        <label id="campoSom" hidden>
+        <label class="metade" id="campoSom" hidden>
           Som
           <select id="modoSom">
             <option value="sem-discord">Todo o som do PC, menos o Discord (recomendado)</option>
             <option value="jogo">Só o som do programa da janela escolhida</option>
           </select>
         </label>
+        <p class="suave" id="dicaQualidade"></p>
         <p class="suave" id="dicaNavegador">
           Pelo navegador, só entra o som de uma <strong>aba</strong> (ex.: um vídeo do YouTube); o som do PC fica de fora,
           para a call do Discord nunca entrar. Para transmitir um <strong>jogo</strong> com som, use o app do Windows.
         </p>
-        <button type="submit" id="iniciar">Escolher o que transmitir</button>
+        <button type="submit" class="grande" id="iniciar">Escolher o que transmitir</button>
       </form>
 
       <section class="cartao" id="aoVivo" hidden>
+        <p class="espectadores" id="espectadores" aria-live="polite"></p>
         <p><strong>Link para os amigos assistirem:</strong></p>
         <div class="linha">
           <span class="link" id="link"></span>
@@ -78,7 +83,7 @@
         <video id="previa" playsinline autoplay muted></video>
       </div>
 
-      <div class="barra">
+      <div class="barra" id="barraDaPrevia">
         <button type="button" class="secundario" id="telaCheia" title="Tela cheia (F ou duplo clique)" disabled>⛶ Tela cheia</button>
         <button type="button" class="secundario" id="flutuante" title="Janela flutuante (P)" disabled hidden>🗗 Janela flutuante</button>
         <span class="suave atalhos">Prévia do que os amigos veem</span>

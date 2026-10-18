@@ -16,6 +16,11 @@
   box-sizing: border-box;
 }
 
+/* Sem isto, regras como "label { display: block }" ganham do atributo hidden */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -162,6 +167,59 @@ button.secundario:hover:not(:disabled) {
   border-radius: var(--raio);
   padding: 20px;
   margin-bottom: 16px;
+}
+
+/* No app: formulário em duas colunas, para caber tudo na janela sem rolar */
+.no-app #formulario {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+}
+
+.no-app #formulario > * {
+  grid-column: 1 / -1;
+}
+
+.no-app #formulario > .metade {
+  grid-column: auto;
+}
+
+@media (max-width: 640px) {
+  .no-app #formulario > .metade {
+    grid-column: 1 / -1;
+  }
+}
+
+/* No app, a prévia não empurra os controles para fora da janela */
+.no-app .palco {
+  max-height: 40vh;
+  margin: 0 auto;
+}
+
+.chave-salva {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+button.botao-link {
+  padding: 0;
+  background: none;
+  color: var(--destaque);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+button.botao-link:hover {
+  background: none;
+  color: var(--texto);
+}
+
+.espectadores {
+  margin-top: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 label {

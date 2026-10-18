@@ -5,7 +5,7 @@ namespace Transmissor.App;
 /// <summary>Configuração do app, guardada em %AppData%\DiscordBot\transmissor.json.</summary>
 internal sealed record Configuracao(string? Servidor)
 {
-    static readonly string Pasta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DiscordBot");
+    internal static readonly string Pasta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DiscordBot");
     static readonly string Arquivo = Path.Combine(Pasta, "transmissor.json");
 
     public static Configuracao Carregar()

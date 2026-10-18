@@ -28,7 +28,7 @@ Não precisa instalar: o app é um arquivo só. Pode deixar ele na Área de Trab
 
 ### Transmitir
 
-1. Digite a **senha de transmitir**, um **título**, o **seu nome** e escolha a **qualidade**. Na dúvida, deixe **720p · 60 fps**.
+1. Na primeira vez, digite a **senha de transmitir**. Depois que ela funcionar, o app guarda neste PC, protegida pelo Windows, e não pede de novo (para trocar, clique em **Trocar**). Escreva um **título**, o **seu nome** e escolha a **qualidade**. Na dúvida, deixe **720p · 60 fps**.
 2. Em **Som**, deixe **"Todo o som do PC, menos o Discord"**. Assim a call do Discord **nunca** entra na transmissão, e ninguém ouve retorno.
 3. Clique em **Escolher a janela do jogo**, escolha a janela (ou a tela inteira) e confirme.
 4. Quando aparecer **● AO VIVO**, o bot posta no Discord o aviso com o botão **Assistir** (se o dono do servidor configurou isso; a página diz se postou). Se não postou, clique em **Copiar** e mande o link você mesmo. Para assistir, os amigos usam a senha para assistir.
@@ -37,6 +37,9 @@ Durante a transmissão:
 - **🔄 Trocar janela:** muda o que está sendo transmitido sem derrubar ninguém.
 - **Som:** dá para trocar o modo sem parar.
 - **Encerrar transmissão:** termina para todo mundo e atualiza o aviso do Discord. Se você fechar o app sem encerrar, o servidor encerra sozinho em 2 minutos.
+- **👀 Quantos assistem:** aparece em cima do link e no ícone perto do relógio.
+- **Minimizar:** ao vivo, a janela vai para o **ícone perto do relógio** (roxo parado, vermelho ao vivo), para não atrapalhar o jogo. Clique nele para voltar; com o botão direito, dá para **encerrar** sem sair do jogo.
+- **Ctrl+Shift+F10:** encerra a transmissão de dentro do jogo, sem precisar sair dele.
 
 ### Se algo der errado
 

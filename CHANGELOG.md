@@ -6,6 +6,23 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-18
+
+Fase 4: a **interface do app**. Tela mais limpa, chave protegida pelo Windows, quantos estão assistindo, ícone na bandeja e atalho para encerrar de dentro do jogo.
+
+### Adicionado
+
+- **Quantos estão assistindo**: ao vivo, a tela de transmitir mostra "👀 2 pessoas assistindo", atualizado a cada 20 s.
+- **Chave de transmissão protegida pelo Windows**: o app guarda a chave neste PC com DPAPI (só o seu usuário do Windows abre) depois que ela funciona, e não pede de novo. A que versões antigas guardavam no navegador, sem proteção, passa para o app. Chave errada é esquecida, e trocar de servidor também apaga a chave.
+- **Tela do app mais limpa**: formulário em duas colunas, botão grande para começar e prévia só durante a transmissão, para caber tudo na janela sem rolar.
+- **Ícone na bandeja**: ao vivo, minimizar esconde a janela perto do relógio. O ícone fica vermelho, mostra quantos assistem e tem menu para encerrar ou voltar para trocar a janela.
+- **Atalho Ctrl+Shift+F10**: encerra a transmissão de qualquer programa, inclusive de dentro do jogo.
+- Ícone do app (roxo parado, vermelho ao vivo) e confirmação antes de fechar o app ao vivo.
+
+### Corrigido
+
+- O campo "Som" e o seletor de som ao vivo apareciam na página de transmitir pelo navegador, onde não valem.
+
 ## [0.3.0] - 2026-10-18
 
 Fase 3: o bot **avisa no Discord** quando alguém fica ao vivo, e o servidor ficou mais protegido.
@@ -48,7 +65,8 @@ Fase 2: transmissão do jogo para os amigos, com vídeo e som, **sem a call do D
 - Painel com botões: escolher arquivo, entrar, pausar/continuar, parar, volume e sair; atualiza sozinho.
 - Testes automáticos (`npm test`) e CI no GitHub Actions (Windows e Linux).
 
-[Unreleased]: https://github.com/VitorAngN/DiscordBot/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/VitorAngN/DiscordBot/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/VitorAngN/DiscordBot/releases/tag/v0.1.0

@@ -1,7 +1,15 @@
 import { DurableObject } from 'cloudflare:workers';
 import { finalizarSala, tratarApi } from './api';
 import { criarAvisoNoDiscord, type AvisoNoDiscord } from './discord';
-import { abandonada, SEM_SINAL_MS, type DadosDaSala, type RepositorioDeSalas } from './salas';
+import {
+  abandonada,
+  contarEspectadores,
+  marcarEspectador,
+  SEM_SINAL_MS,
+  type DadosDaSala,
+  type Espectadores,
+  type RepositorioDeSalas,
+} from './salas';
 import { criarClienteSfu } from './sfu';
 import {
   ESTADO_INICIAL,
@@ -49,6 +57,18 @@ export class Sala extends DurableObject<Env> {
     await this.ctx.storage.put('sala', sala);
     const proximo = sala.estado === 'ao-vivo' ? Date.now() + SEM_SINAL_MS + 5_000 : Date.now() + VALIDADE_MS;
     await this.ctx.storage.setAlarm(proximo);
+  }
+
+  async marcarEspectador(sessao: string, agora: number): Promise<void> {
+    await this.ctx.storage.put('espectadores', marcarEspectador(await this.espectadores(), sessao, agora));
+  }
+
+  async contarEspectadores(agora: number): Promise<number> {
+    return contarEspectadores(await this.espectadores(), agora);
+  }
+
+  private async espectadores(): Promise<Espectadores> {
+    return (await this.ctx.storage.get<Espectadores>('espectadores')) ?? {};
   }
 
   override async alarm(): Promise<void> {
@@ -150,6 +170,8 @@ function repositorio(salas: DurableObjectNamespace<Sala>): RepositorioDeSalas {
   return {
     obter: (id) => sala(id).obter(),
     salvar: (id, dados) => sala(id).salvar(dados),
+    marcarEspectador: (id, sessao, agora) => sala(id).marcarEspectador(sessao, agora),
+    contarEspectadores: (id, agora) => sala(id).contarEspectadores(agora),
   };
 }
 
