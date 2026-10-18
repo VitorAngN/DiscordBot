@@ -194,9 +194,13 @@ async function confirmarAoVivo({ req, deps, id, sala }: Contexto, origem: string
   let aoVivo = marcarAoVivo(sala, inicio);
   let discord: SituacaoDoAviso;
   if (sala.aviso) discord = 'ja-publicado'; // reconexão de quem transmite: a mensagem já está lá
-  else if (sala.avisar === false) discord = 'desligado';
-  else if (!deps.discord) discord = 'nao-configurado';
-  else {
+  else if (sala.avisar === false) {
+    console.log('Aviso no Discord desligado por quem transmite.');
+    discord = 'desligado';
+  } else if (!deps.discord) {
+    console.warn('Aviso no Discord não configurado: faltam DISCORD_BOT_TOKEN ou DISCORD_CANAL_AVISOS.');
+    discord = 'nao-configurado';
+  } else {
     try {
       const mensagemId = await deps.discord.publicar({
         nome: sala.nome ?? NOME_PADRAO,
@@ -206,6 +210,7 @@ async function confirmarAoVivo({ req, deps, id, sala }: Contexto, origem: string
         inicio,
       });
       aoVivo = registrarAviso(aoVivo, { mensagemId, inicio });
+      console.log(`Aviso postado no Discord (mensagem ${mensagemId}).`);
       discord = 'publicado';
     } catch (e) {
       console.error('Não deu para postar o aviso no Discord:', e);
@@ -288,6 +293,7 @@ export async function finalizarSala(sala: DadosDaSala, discord: AvisoNoDiscord |
         qualidade: nomeDaQualidade(sala),
         inicio: sala.aviso.inicio,
       }, agora);
+      console.log(`Aviso no Discord trocado para "encerrou" (mensagem ${sala.aviso.mensagemId}).`);
     } catch (e) {
       console.error('Não deu para atualizar o aviso no Discord:', e);
     }
