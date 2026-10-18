@@ -11,13 +11,19 @@
   },
   // Sala: uma instância por sala. Uso: uma só, para a trava de uso.
   // (o plano grátis só aceita Durable Objects com SQLite)
+  // Tentativas: uma por IP, para o limite de senhas erradas.
   "durable_objects": {
     "bindings": [
       { "name": "SALAS", "class_name": "Sala" },
-      { "name": "USO", "class_name": "Uso" }
+      { "name": "USO", "class_name": "Uso" },
+      { "name": "TENTATIVAS", "class_name": "Tentativas" }
     ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Sala", "Uso"] }],
+  // Migrações já publicadas não podem mudar: classe nova entra numa migração nova
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Sala", "Uso"] },
+    { "tag": "v2", "new_sqlite_classes": ["Tentativas"] }
+  ],
   "vars": {
     // Trava de uso, em GB nos últimos 31 dias. A cota grátis do Realtime é 1.000 GB; nunca passa disso.
     "LIMITE_GB_MES": "900"

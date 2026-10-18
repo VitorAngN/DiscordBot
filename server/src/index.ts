@@ -2,11 +2,20 @@ import { DurableObject } from 'cloudflare:workers';
 import { tratarApi } from './api';
 import type { DadosDaSala, RepositorioDeSalas } from './salas';
 import { criarClienteSfu } from './sfu';
+import {
+  ESTADO_INICIAL,
+  estaBloqueado,
+  expiraEm,
+  registrarFalha,
+  type ControleDeTentativas,
+  type EstadoDeTentativas,
+} from './tentativas';
 import { ContadorDeUso, DIA_MS, limiteEmBytes, TAXA_ESTIMADA_BPS, type MedidorDeUso, type SessaoDeUso } from './uso';
 
 export interface Env {
   SALAS: DurableObjectNamespace<Sala>;
   USO: DurableObjectNamespace<Uso>;
+  TENTATIVAS: DurableObjectNamespace<Tentativas>;
   ASSETS: Fetcher;
   REALTIME_APP_ID?: string;
   REALTIME_APP_SECRET?: string;
@@ -85,6 +94,35 @@ export class Uso extends DurableObject<Env> {
   }
 }
 
+/** Uma instância por IP: conta as senhas erradas dele e bloqueia por um tempo quando passa do limite. */
+export class Tentativas extends DurableObject<Env> {
+  async bloqueado(): Promise<boolean> {
+    return estaBloqueado(await this.estado(), Date.now());
+  }
+
+  async registrarFalha(): Promise<void> {
+    const novo = registrarFalha(await this.estado(), Date.now());
+    await this.ctx.storage.put('estado', novo);
+    await this.ctx.storage.setAlarm(expiraEm(novo)); // depois disso, nada mais importa
+  }
+
+  override async alarm(): Promise<void> {
+    await this.ctx.storage.deleteAll();
+  }
+
+  private async estado(): Promise<EstadoDeTentativas> {
+    return (await this.ctx.storage.get<EstadoDeTentativas>('estado')) ?? ESTADO_INICIAL;
+  }
+}
+
+function controleDeTentativas(tentativas: DurableObjectNamespace<Tentativas>): ControleDeTentativas {
+  const de = (cliente: string) => tentativas.get(tentativas.idFromName(cliente));
+  return {
+    bloqueado: (cliente) => de(cliente).bloqueado(),
+    registrarFalha: (cliente) => de(cliente).registrarFalha(),
+  };
+}
+
 function repositorio(salas: DurableObjectNamespace<Sala>): RepositorioDeSalas {
   const sala = (id: string) => salas.get(salas.idFromName(id));
   return {
@@ -117,14 +155,34 @@ export default {
         chaveDeAssistir: env.ASSISTIR_CHAVE ?? '',
         uso: medidor(env.USO),
         limiteDeUso: limiteEmBytes(env.LIMITE_GB_MES),
+        tentativas: controleDeTentativas(env.TENTATIVAS),
       });
     }
 
     // Link curto que vai para o Discord: /s/<sala> abre a página de assistir
     if (LINK_DE_SALA.test(url.pathname)) {
-      return env.ASSETS.fetch(new Request(new URL('/assistir', url), req));
+      return comCabecalhosDeSeguranca(await env.ASSETS.fetch(new Request(new URL('/assistir', url), req)));
     }
 
     return env.ASSETS.fetch(req);
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * Os arquivos estáticos recebem esses cabeçalhos pelo public/_headers; a página que o Worker
+ * entrega em /s/<sala> recebe aqui, para não depender de o _headers valer nesse caminho.
+ */
+function comCabecalhosDeSeguranca(resposta: Response): Response {
+  const nova = new Response(resposta.body, resposta);
+  nova.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  nova.headers.set('Referrer-Policy', 'no-referrer');
+  nova.headers.set('X-Content-Type-Options', 'nosniff');
+  nova.headers.set('X-Frame-Options', 'DENY');
+  nova.headers.set('Content-Security-Policy', POLITICA_DE_CONTEUDO);
+  return nova;
+}
+
+/** Igual à do public/_headers: só scripts e estilos do próprio servidor, e nada de ser embutido em outro site. */
+const POLITICA_DE_CONTEUDO =
+  "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; " +
+  "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
