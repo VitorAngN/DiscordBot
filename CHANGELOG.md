@@ -11,6 +11,9 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Guia [Monte o seu próprio servidor](docs/SERVIDOR-PROPRIO.md), com os pré-requisitos e cada passo para quem nunca usou terminal, e a tabela "Por onde começar" no README.
 - Limite de tentativas de senha: 8 senhas erradas em 10 minutos bloqueiam o IP por 15 minutos (chave de transmissão e senha para assistir).
 - Servidor escondido dos buscadores (`robots.txt` e `X-Robots-Tag`) e cabeçalhos de segurança nas páginas: política de conteúdo, proibição de embutir em outros sites e sem vazar o link da sala para sites externos.
+- **Aviso no Discord** (Fase 3): ao ficar ao vivo, o servidor usa o seu bot para postar no canal `🔴 Fulano está transmitindo` com o botão ▶ Assistir, e troca por "encerrou", com a duração, quando acaba. Configurável com `DISCORD_BOT_TOKEN` e `DISCORD_CANAL_AVISOS`; o bot não precisa estar ligado.
+- Campo "Seu nome" e opção "Avisar no Discord" na página de transmitir.
+- Sinal de vida de quem transmite: sem sinal por 2 minutos (app fechado, PC desligado), a sala encerra sozinha e o aviso é atualizado.
 
 ## [0.2.0] - 2026-10-17
 

@@ -14,9 +14,8 @@ Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa pá
 
 1. Você abre o **Transmissor.exe**, escolhe a janela do jogo e começa a transmitir.
 2. O app envia a imagem da janela e o som do PC **sem o Discord**, então a voz da call nunca volta para quem assiste.
-3. Você manda o link no Discord, e os amigos assistem no navegador (celular ou PC) com a senha para assistir, enquanto conversam no canal de voz.
-
-Na Fase 3, o bot vai postar o link no canal sozinho, com um botão **Assistir**.
+3. O seu bot posta no canal do Discord `🔴 Fulano está transmitindo`, com o botão **▶ Assistir** (ou você manda o link). Os amigos assistem no navegador, no celular ou no PC, com a senha para assistir, enquanto conversam no canal de voz.
+4. Quando a transmissão acaba, o bot atualiza a mensagem para "encerrou".
 
 ## Por onde começar
 
@@ -40,7 +39,7 @@ Na Fase 3, o bot vai postar o link no canal sozinho, com um botão **Assistir**.
 
 - [x] **Fase 1 (v0.1.0):** bot entra na call e toca arquivos de áudio
 - [x] **Fase 2 (v0.2.0):** transmissão da janela e do som do jogo (sem o Discord) para uma página no navegador
-- [ ] **Fase 3 (v0.3.0):** botão Transmitir faz o bot postar o link
+- [x] **Fase 3 (v0.3.0):** ao ficar ao vivo, o bot posta o aviso com o botão Assistir
 - [ ] **Fase 4 (v0.4.0):** interface final do app
 - [ ] **Fase 5 (v1.0.0):** pacote para os amigos instalarem
 

@@ -116,17 +116,45 @@ Usada pela página de transmitir e, na parte 2c, pelo app do Windows.
 
 | Método e rota | Quem | O que faz |
 |---|---|---|
-| `POST /api/salas` | Chave de transmissão | Cria a sala (`titulo` e `qualidade`: `1080p60`, `1080p30`, `720p60` ou `720p30`). Devolve `sala`, `link` e o `token` do transmissor |
+| `POST /api/salas` | Chave de transmissão | Cria a sala (`titulo`, `nome`, `avisar` e `qualidade`: `1080p60`, `1080p30`, `720p60` ou `720p30`). Devolve `sala`, `link` e o `token` do transmissor |
 | `GET /api/uso` | Chave de transmissão | Uso estimado dos últimos 31 dias e o limite, em bytes |
 | `GET /api/salas/:sala` | Senha para assistir | Título, estado (`aguardando`, `ao-vivo`, `encerrada`) e número da publicação |
 | `POST /api/salas/:sala/publicar` | Token | Recebe a oferta WebRTC e as faixas; devolve a resposta do SFU |
-| `POST /api/salas/:sala/ao-vivo` | Token | Confirma que a conexão subiu; a sala passa a aparecer como ao vivo |
+| `POST /api/salas/:sala/ao-vivo` | Token | Confirma que a conexão subiu; a sala passa a aparecer como ao vivo e o bot posta o aviso. Devolve `discord`: `publicado`, `ja-publicado`, `desligado`, `nao-configurado` ou `falhou` |
+| `POST /api/salas/:sala/sinal` | Token | Sinal de vida de quem transmite (a cada 20 s); `410` se a sala já encerrou |
 | `DELETE /api/salas/:sala` | Token | Encerra a sala |
 | `POST /api/salas/:sala/assistir` | Senha para assistir | Cria a sessão de quem assiste; devolve a oferta do SFU |
 | `POST /api/salas/:sala/assistir/:sessao/resposta` | Senha para assistir | Envia a resposta WebRTC de quem assiste |
 | `POST /api/salas/:sala/assistir/:sessao/presenca` | Senha para assistir | "Continuo assistindo"; responde se pode continuar (`continuar`, `motivo`) |
 
-As senhas e tokens vão no cabeçalho `Authorization: Bearer ...`. Sem a senha para assistir configurada, as rotas de quem assiste ficam abertas para quem tem o link. Os erros vêm como `{ "erro": "mensagem" }`; o limite de uso responde **429**. Uma sala sem atividade por 24 horas é apagada sozinha.
+As senhas e tokens vão no cabeçalho `Authorization: Bearer ...`. Sem a senha para assistir configurada, as rotas de quem assiste ficam abertas para quem tem o link. Os erros vêm como `{ "erro": "mensagem" }`; o limite de uso e o bloqueio por senhas erradas respondem **429**. Uma sala ao vivo sem sinal por 2 minutos é encerrada; uma sala parada por 24 horas é apagada.
+
+## Aviso no Discord (opcional)
+
+Quando alguém fica ao vivo, o **seu bot** posta no canal escolhido a mensagem `🔴 Fulano está transmitindo`, com o título, a qualidade e o botão **▶ Assistir** (que abre o link da sala). Quando a transmissão acaba, ele troca a mensagem por `⚫ Fulano encerrou a transmissão`, com a duração, e tira o botão. A mensagem nunca marca ninguém.
+
+O servidor posta direto pela API do Discord: o bot **não precisa estar ligado** em lugar nenhum.
+
+Para ligar:
+
+1. No Discord, ative o **Modo desenvolvedor**: **Configurações de Usuário → Avançado → Modo desenvolvedor**.
+2. Clique com o botão direito no canal onde os avisos devem aparecer → **Copiar ID do canal**.
+3. Garanta que o bot está no servidor e, nesse canal, tem as permissões **Ver canal**, **Enviar mensagens** e **Inserir links** (o link de convite do bot já pede essas).
+4. Na pasta `server`, cadastre os dois segredos:
+
+```bash
+npx wrangler secret put DISCORD_BOT_TOKEN
+```
+↑ o **token do bot**, o mesmo do `bot/.env` (Developer Portal → Bot → Reset Token, se precisar de um novo)
+
+```bash
+npx wrangler secret put DISCORD_CANAL_AVISOS
+```
+↑ o **ID do canal** copiado no passo 2
+
+Na página de transmitir, cada um escolhe o **nome** que aparece no aviso e pode desmarcar **Avisar no Discord**. Sem os dois segredos, a transmissão funciona normal e a página avisa para mandar o link manualmente. Se o Discord falhar (por exemplo, sem permissão no canal), a transmissão segue do mesmo jeito.
+
+**Sinal de vida:** a página de transmitir avisa o servidor a cada 20 s que continua no ar. Se ela some por **2 minutos** (o app foi fechado sem encerrar, o PC desligou ou a internet caiu), o servidor encerra a sala sozinho e atualiza o aviso do Discord. Assim a mensagem não fica "ao vivo" para sempre.
 
 ## Segurança
 
@@ -165,6 +193,7 @@ A contagem depende da página de assistir do próprio servidor. Uma página modi
 | `src/sfu.ts` | Cliente da API do Realtime SFU |
 | `src/uso.ts` | Trava de uso: estimativa por presença e soma dos últimos 31 dias |
 | `src/tentativas.ts` | Limite de tentativas de senha por IP |
+| `src/discord.ts` | Aviso no Discord: posta e edita a mensagem pelo bot |
 | `public/_headers`, `public/robots.txt` | Cabeçalhos de segurança e bloqueio de buscadores |
 | `public/js/qualidade.js` | Qualidades de transmissão, usadas pela página e pelo servidor |
 | `public/js/tela.js` | Tela cheia e janela flutuante (páginas de assistir e de transmitir) |
