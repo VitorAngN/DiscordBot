@@ -16,10 +16,23 @@ export interface Publicacao {
   inicio: number;
 }
 
+/** Mensagem que o bot postou no Discord quando a sala ficou ao vivo. */
+export interface AvisoPostado {
+  mensagemId: string;
+  inicio: number;
+}
+
 export interface DadosDaSala {
   titulo: string;
   /** Chave de `QUALIDADES`. Salas antigas não têm (contam como a mais alta). */
   qualidade?: string;
+  /** Quem transmite, como aparece no aviso do Discord. */
+  nome?: string;
+  /** Postar o aviso no Discord ao ficar ao vivo. */
+  avisar?: boolean;
+  aviso?: AvisoPostado | null;
+  /** Último sinal de vida de quem transmite (a página manda a cada 20 s). */
+  ultimoSinal?: number;
   criadaEm: number;
   hashDoToken: string;
   estado: EstadoDaSala;
@@ -33,9 +46,22 @@ export interface RepositorioDeSalas {
 
 export const TITULO_PADRAO = 'Transmissão';
 export const MAX_TITULO = 100;
+export const NOME_PADRAO = 'Alguém';
+export const MAX_NOME = 40;
+/**
+ * Ao vivo sem sinal de quem transmite por mais que isso: o app fechou ou a internet caiu; a sala encerra.
+ * O sinal vem a cada 20 s, mas o navegador pode atrasar timers de janelas minimizadas para 1 por minuto.
+ */
+export const SEM_SINAL_MS = 2 * 60_000;
 
-export function novaSala(titulo: string, qualidade: string, hashDoToken: string, agora: number): DadosDaSala {
-  return { titulo, qualidade, criadaEm: agora, hashDoToken, estado: 'aguardando', publicacao: null };
+export function novaSala(
+  titulo: string,
+  qualidade: string,
+  hashDoToken: string,
+  agora: number,
+  { nome = NOME_PADRAO, avisar = true }: { nome?: string; avisar?: boolean } = {},
+): DadosDaSala {
+  return { titulo, qualidade, nome, avisar, aviso: null, criadaEm: agora, hashDoToken, estado: 'aguardando', publicacao: null };
 }
 
 /** Nova conexão do transmissor ao SFU. Fica `aguardando` até ele confirmar que conectou. */
@@ -44,8 +70,22 @@ export function registrarPublicacao(sala: DadosDaSala, sessionId: string, faixas
   return { ...sala, estado: 'aguardando', publicacao: { sessionId, faixas, numero, inicio: agora } };
 }
 
-export function marcarAoVivo(sala: DadosDaSala): DadosDaSala {
-  return { ...sala, estado: 'ao-vivo' };
+export function marcarAoVivo(sala: DadosDaSala, agora: number): DadosDaSala {
+  return { ...sala, estado: 'ao-vivo', ultimoSinal: agora };
+}
+
+export function registrarSinal(sala: DadosDaSala, agora: number): DadosDaSala {
+  return { ...sala, ultimoSinal: agora };
+}
+
+export function registrarAviso(sala: DadosDaSala, aviso: AvisoPostado): DadosDaSala {
+  return { ...sala, aviso };
+}
+
+/** Ao vivo, mas quem transmite sumiu (sem sinal há mais de `SEM_SINAL_MS`). */
+export function abandonada(sala: DadosDaSala, agora: number): boolean {
+  const ultimo = sala.ultimoSinal ?? sala.publicacao?.inicio ?? sala.criadaEm;
+  return sala.estado === 'ao-vivo' && agora - ultimo > SEM_SINAL_MS;
 }
 
 export function encerrar(sala: DadosDaSala): DadosDaSala {
@@ -56,11 +96,16 @@ export function encerrar(sala: DadosDaSala): DadosDaSala {
 export function resumoPublico(sala: DadosDaSala) {
   return {
     titulo: sala.titulo,
-    qualidade: (sala.qualidade && QUALIDADES[sala.qualidade]?.nome) || null,
+    nome: sala.nome ?? null,
+    qualidade: nomeDaQualidade(sala),
     estado: sala.estado,
     publicacao: sala.estado === 'ao-vivo' ? (sala.publicacao?.numero ?? null) : null,
     inicio: sala.estado === 'ao-vivo' ? (sala.publicacao?.inicio ?? null) : null,
   };
+}
+
+export function nomeDaQualidade(sala: DadosDaSala): string | null {
+  return (sala.qualidade && QUALIDADES[sala.qualidade]?.nome) || null;
 }
 
 const ALFABETO = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
