@@ -1,0 +1,11 @@
+# Cabeçalhos de segurança de todas as páginas e arquivos estáticos.
+# - X-Robots-Tag: buscadores não listam nada deste servidor (é só para os amigos)
+# - Referrer-Policy: o link da sala não vaza para sites externos
+# - X-Frame-Options / frame-ancestors: ninguém embute as páginas em outro site
+# - Content-Security-Policy: só roda script e estilo do próprio servidor
+/*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
