@@ -2,7 +2,7 @@
 
 Transmita a janela do seu jogo (vídeo + áudio) para os amigos, usando o Discord como ponto de encontro e sem depender de outros aplicativos.
 
-> **Status:** a transmissão do jogo já funciona (v0.2.0): baixe o [Transmissor.exe](https://github.com/VitorAngN/DiscordBot/releases/latest). Agora vem a Fase 3, em que o bot posta o link no Discord sozinho. Veja o [plano completo](docs/PLANO.md).
+> **Status:** a transmissão do jogo e o aviso no Discord já funcionam (v0.3.0): baixe o [Transmissor.exe](https://github.com/VitorAngN/DiscordBot/releases/latest). Agora vem a Fase 4, a interface final do app. Veja o [plano completo](docs/PLANO.md).
 
 ## Por que existe
 
@@ -14,7 +14,7 @@ Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa pá
 
 1. Você abre o **Transmissor.exe**, escolhe a janela do jogo e começa a transmitir.
 2. O app envia a imagem da janela e o som do PC **sem o Discord**, então a voz da call nunca volta para quem assiste.
-3. O seu bot posta no canal do Discord `🔴 Fulano está transmitindo`, com o botão **▶ Assistir** (ou você manda o link). Os amigos assistem no navegador, no celular ou no PC, com a senha para assistir, enquanto conversam no canal de voz.
+3. O seu bot posta no canal do Discord `🔴 Fulano está transmitindo`, com o botão **Assistir** (ou você manda o link). Os amigos assistem no navegador, no celular ou no PC, com a senha para assistir, enquanto conversam no canal de voz.
 4. Quando a transmissão acaba, o bot atualiza a mensagem para "encerrou".
 
 ## Por onde começar

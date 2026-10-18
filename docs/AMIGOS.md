@@ -31,7 +31,7 @@ Não precisa instalar: o app é um arquivo só. Pode deixar ele na Área de Trab
 1. Digite a **senha de transmitir**, um **título**, o **seu nome** e escolha a **qualidade**. Na dúvida, deixe **720p · 60 fps**.
 2. Em **Som**, deixe **"Todo o som do PC, menos o Discord"**. Assim a call do Discord **nunca** entra na transmissão, e ninguém ouve retorno.
 3. Clique em **Escolher a janela do jogo**, escolha a janela (ou a tela inteira) e confirme.
-4. Quando aparecer **● AO VIVO**, o bot posta no Discord o aviso com o botão **▶ Assistir** (se o dono do servidor configurou isso; a página diz se postou). Se não postou, clique em **Copiar** e mande o link você mesmo. Para assistir, os amigos usam a senha para assistir.
+4. Quando aparecer **● AO VIVO**, o bot posta no Discord o aviso com o botão **Assistir** (se o dono do servidor configurou isso; a página diz se postou). Se não postou, clique em **Copiar** e mande o link você mesmo. Para assistir, os amigos usam a senha para assistir.
 
 Durante a transmissão:
 - **🔄 Trocar janela:** muda o que está sendo transmitido sem derrubar ninguém.
