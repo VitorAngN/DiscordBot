@@ -50,6 +50,16 @@ describe('aviso no Discord', () => {
     expect(chamadas[0].cabecalhos.get('Authorization')).toBe('Bot token-do-bot');
   });
 
+  it('o rodapé só fala da senha quando o servidor pede senha para assistir', async () => {
+    const { buscar, chamadas } = fetchFalso({ corpo: { id: 'msg-1' } }, { corpo: { id: 'msg-2' } });
+    const discord = criarAvisoNoDiscord('t', 'c', buscar);
+    await discord.publicar(AVISO);
+    await discord.publicar({ ...AVISO, pedeSenha: true });
+
+    expect(chamadas[0].corpo.embeds[0].footer.text).toBe('Clique em Assistir para ver no navegador');
+    expect(chamadas[1].corpo.embeds[0].footer.text).toBe('Clique em Assistir e use a senha para assistir');
+  });
+
   it('nunca marca ninguém, mesmo com @ no nome ou no título', async () => {
     const { buscar, chamadas } = fetchFalso({ corpo: { id: 'msg-1' } });
     await criarAvisoNoDiscord('t', 'c', buscar).publicar({ ...AVISO, nome: '@everyone' });
