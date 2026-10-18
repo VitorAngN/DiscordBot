@@ -69,7 +69,7 @@ Para quem transmite é **um programa só**. Por dentro, ele tem as partes abaixo
 | 1. **Bot de som** ✅ | v0.1.0 | Bot entra na call e toca arquivos, com painel de botões. Valida o DAVE. |
 | 2. **Transmissão** ✅ | v0.2.0 | O app captura a janela e o som só do jogo e transmite para uma página no navegador. |
 | 3. **Integração** ✅ | v0.3.0 | Ao ficar ao vivo, o servidor usa o seu bot para postar no Discord o aviso com o botão Assistir, e o atualiza quando a transmissão acaba (o bot não precisa estar ligado). |
-| 4. **Interface** | v0.4.0 | Layout simples, token salvo no PC (protegido pelo Windows/DPAPI), escolha de qualidade, música pelo app. |
+| 4. **Interface** ✅ | v0.4.0 | Tela mais limpa, chave de transmissão guardada no PC (protegida pelo Windows/DPAPI), quantos estão assistindo, ícone na bandeja e atalho para encerrar de dentro do jogo. A música continua no bot da Fase 1. |
 | 5. **Pacote** | v1.0.0 | Zip para os amigos e um guia de 5 minutos para criar o próprio bot. |
 
 A Fase 2 é dividida em partes, cada uma num PR:

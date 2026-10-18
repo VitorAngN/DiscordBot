@@ -6,6 +6,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-18
+
+Fase 4: a **interface do app**. Tela mais limpa, chave protegida pelo Windows, quantos estão assistindo, ícone na bandeja e atalho para encerrar de dentro do jogo.
+
 ### Adicionado
 
 - **Quantos estão assistindo**: ao vivo, a tela de transmitir mostra "👀 2 pessoas assistindo", atualizado a cada 20 s.
@@ -61,7 +65,8 @@ Fase 2: transmissão do jogo para os amigos, com vídeo e som, **sem a call do D
 - Painel com botões: escolher arquivo, entrar, pausar/continuar, parar, volume e sair; atualiza sozinho.
 - Testes automáticos (`npm test`) e CI no GitHub Actions (Windows e Linux).
 
-[Unreleased]: https://github.com/VitorAngN/DiscordBot/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/VitorAngN/DiscordBot/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/VitorAngN/DiscordBot/releases/tag/v0.1.0
