@@ -15,6 +15,7 @@ import {
   type RepositorioDeSalas,
 } from './salas';
 import { ErroSfu, type ClienteSfu, type DescricaoDeSessao, type FaixaLocal } from './sfu';
+import { chaveDoCliente, type ControleDeTentativas } from './tentativas';
 import { JANELA_DIAS, type MedidorDeUso } from './uso';
 import { QUALIDADE_PADRAO, qualidadeValida, taxaPorEspectador } from '../public/js/qualidade.js';
 
@@ -29,11 +30,13 @@ export interface Dependencias {
   uso: MedidorDeUso;
   /** Acima disso (em bytes nos últimos 31 dias), ninguém transmite nem assiste. */
   limiteDeUso: number;
+  tentativas: ControleDeTentativas;
   agora?: () => number;
 }
 
 const MENSAGEM_LIMITE =
   'O limite grátis de transmissão foi atingido. Ela volta sozinha quando o uso dos últimos 31 dias baixar.';
+const MENSAGEM_BLOQUEIO = 'Muitas senhas erradas seguidas. Espere uns 15 minutos e tente de novo.';
 
 const ID_DE_SALA = /^[0-9A-Za-z]{10}$/;
 const ID_DE_SESSAO = /^[0-9A-Za-z_-]{1,128}$/;
@@ -50,13 +53,16 @@ class ErroHttp extends Error {
   }
 }
 
+/** A API nunca deve aparecer em buscadores nem ficar guardada em cache. */
+const CABECALHOS_DA_API = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' };
+
 const json = (dados: unknown, status = 200) =>
   new Response(JSON.stringify(dados), {
     status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+    headers: { 'Content-Type': 'application/json; charset=utf-8', ...CABECALHOS_DA_API },
   });
 
-const semConteudo = () => new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
+const semConteudo = () => new Response(null, { status: 204, headers: CABECALHOS_DA_API });
 
 export async function tratarApi(req: Request, deps: Dependencias): Promise<Response> {
   try {
@@ -220,21 +226,28 @@ function tokenDe(req: Request): string | null {
   return cabecalho.startsWith('Bearer ') ? cabecalho.slice(7).trim() || null : null;
 }
 
+/**
+ * Confere uma senha com limite de tentativas por IP: quem erra demais fica bloqueado por um tempo,
+ * mesmo que depois acerte. Pedido sem senha não conta como tentativa (ainda não é um chute).
+ */
+async function conferirSenha(req: Request, deps: Dependencias, esperada: string, mensagemDeErro: string) {
+  const cliente = chaveDoCliente(req);
+  if (await deps.tentativas.bloqueado(cliente)) throw new ErroHttp(429, MENSAGEM_BLOQUEIO);
+  const recebida = tokenDe(req);
+  if (recebida && (await segredosIguais(recebida, esperada))) return;
+  if (recebida) await deps.tentativas.registrarFalha(cliente);
+  throw new ErroHttp(401, mensagemDeErro);
+}
+
 async function exigirChaveDeTransmissao(req: Request, deps: Dependencias) {
   if (!deps.chaveDeTransmissao) throw new ErroHttp(503, 'O servidor ainda não tem a chave de transmissão configurada.');
-  const chave = tokenDe(req);
-  if (!chave || !(await segredosIguais(chave, deps.chaveDeTransmissao))) {
-    throw new ErroHttp(401, 'Chave de transmissão inválida.');
-  }
+  await conferirSenha(req, deps, deps.chaveDeTransmissao, 'Chave de transmissão inválida.');
 }
 
 /** Com a senha de assistir configurada, só quem a tem vê a sala. */
 async function exigirEspectador(req: Request, deps: Dependencias) {
   if (!deps.chaveDeAssistir) return;
-  const senha = tokenDe(req);
-  if (!senha || !(await segredosIguais(senha, deps.chaveDeAssistir))) {
-    throw new ErroHttp(401, 'Senha para assistir inválida.');
-  }
+  await conferirSenha(req, deps, deps.chaveDeAssistir, 'Senha para assistir inválida.');
 }
 
 async function exigirCota(deps: Dependencias) {

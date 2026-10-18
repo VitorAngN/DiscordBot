@@ -204,6 +204,15 @@ async function ciclo() {
       mostrarSobreposicao(senha ? 'Senha incorreta. Tente de novo.' : 'Esta transmissão é só para convidados.', { pedirSenha: true });
       return; // espera a senha
     }
+    if (erro.status === 429) {
+      // Bloqueado por senhas erradas: avisa e só tenta de novo daqui a pouco
+      desconectar();
+      mostrarSelo('aguardando', 'Bloqueado');
+      elementos.detalhe.textContent = 'Muitas senhas erradas seguidas.';
+      mostrarSobreposicao(erro.message, { pedirSenha: true });
+      agendar(60_000);
+      return;
+    }
     if (erro.status === 404) {
       mostrarSelo('erro', 'Não encontrada');
       elementos.detalhe.textContent = 'Confira se o link está completo.';

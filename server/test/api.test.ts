@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tratarApi, type Dependencias } from '../src/api';
 import type { DadosDaSala, RepositorioDeSalas } from '../src/salas';
 import type { ClienteSfu } from '../src/sfu';
+import {
+  ESTADO_INICIAL,
+  estaBloqueado,
+  MAX_FALHAS,
+  registrarFalha,
+  type ControleDeTentativas,
+  type EstadoDeTentativas,
+} from '../src/tentativas';
 import type { MedidorDeUso } from '../src/uso';
 import { taxaPorEspectador } from '../public/js/qualidade.js';
 
@@ -39,6 +47,15 @@ function medidorFalso() {
   } satisfies MedidorDeUso & { definirTotal(bytes: number): void };
 }
 
+/** Mesmas regras do Durable Object `Tentativas`, em memória e com o relógio parado. */
+function tentativasEmMemoria(): ControleDeTentativas {
+  const estados = new Map<string, EstadoDeTentativas>();
+  return {
+    bloqueado: async (cliente) => estaBloqueado(estados.get(cliente) ?? ESTADO_INICIAL, 1_000),
+    registrarFalha: async (cliente) => void estados.set(cliente, registrarFalha(estados.get(cliente) ?? ESTADO_INICIAL, 1_000)),
+  };
+}
+
 const LIMITE = 900;
 
 let salas: ReturnType<typeof repositorioEmMemoria>;
@@ -50,11 +67,24 @@ beforeEach(() => {
   salas = repositorioEmMemoria();
   sfu = sfuFalso();
   uso = medidorFalso();
-  deps = { salas, sfu, uso, chaveDeTransmissao: CHAVE, chaveDeAssistir: '', limiteDeUso: LIMITE, agora: () => 1_000 };
+  deps = {
+    salas,
+    sfu,
+    uso,
+    chaveDeTransmissao: CHAVE,
+    chaveDeAssistir: '',
+    limiteDeUso: LIMITE,
+    tentativas: tentativasEmMemoria(),
+    agora: () => 1_000,
+  };
 });
 
-function pedir(metodo: string, caminho: string, { corpo, token }: { corpo?: unknown; token?: string } = {}) {
-  const headers: Record<string, string> = {};
+function pedir(
+  metodo: string,
+  caminho: string,
+  { corpo, token, ip = '198.51.100.1' }: { corpo?: unknown; token?: string; ip?: string } = {},
+) {
+  const headers: Record<string, string> = { 'CF-Connecting-IP': ip };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (corpo !== undefined) headers['Content-Type'] = 'application/json';
   const req = new Request(`${ORIGEM}${caminho}`, {
@@ -340,6 +370,47 @@ describe('trava de uso', () => {
       janelaDias: 31,
       atingido: false,
     });
+  });
+});
+
+describe('limite de tentativas de senha', () => {
+  it('depois de muitas chaves de transmissão erradas, bloqueia o IP mesmo com a chave certa', async () => {
+    for (let i = 0; i < MAX_FALHAS; i++) {
+      expect((await pedir('POST', '/api/salas', { token: `chute-${i}` })).status).toBe(401);
+    }
+
+    const certa = await pedir('POST', '/api/salas', { token: CHAVE });
+    expect(certa.status).toBe(429);
+    expect((await corpo(certa)).erro).toContain('Muitas senhas erradas');
+    expect((await pedir('GET', '/api/uso', { token: CHAVE })).status).toBe(429);
+  });
+
+  it('o bloqueio vale só para o IP que errou', async () => {
+    for (let i = 0; i < MAX_FALHAS; i++) await pedir('POST', '/api/salas', { token: 'chute', ip: '203.0.113.9' });
+
+    expect((await pedir('POST', '/api/salas', { token: CHAVE, ip: '203.0.113.9' })).status).toBe(429);
+    expect((await pedir('POST', '/api/salas', { token: CHAVE, ip: '198.51.100.2' })).status).toBe(201);
+  });
+
+  it('também protege a senha de assistir', async () => {
+    deps.chaveDeAssistir = 'senha-dos-amigos';
+    const { sala } = await criarSala();
+    for (let i = 0; i < MAX_FALHAS; i++) await pedir('GET', `/api/salas/${sala}`, { token: 'chute' });
+
+    expect((await pedir('GET', `/api/salas/${sala}`, { token: 'senha-dos-amigos' })).status).toBe(429);
+  });
+
+  it('abrir sem senha não conta como tentativa', async () => {
+    deps.chaveDeAssistir = 'senha-dos-amigos';
+    const { sala } = await criarSala();
+    for (let i = 0; i < MAX_FALHAS * 2; i++) expect((await pedir('GET', `/api/salas/${sala}`)).status).toBe(401);
+
+    expect((await pedir('GET', `/api/salas/${sala}`, { token: 'senha-dos-amigos' })).status).toBe(200);
+  });
+
+  it('as respostas da API não aparecem em buscadores', async () => {
+    const resposta = await pedir('GET', '/api/uso', { token: CHAVE });
+    expect(resposta.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
   });
 });
 

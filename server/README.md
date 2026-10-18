@@ -128,6 +128,18 @@ Usada pela página de transmitir e, na parte 2c, pelo app do Windows.
 
 As senhas e tokens vão no cabeçalho `Authorization: Bearer ...`. Sem a senha para assistir configurada, as rotas de quem assiste ficam abertas para quem tem o link. Os erros vêm como `{ "erro": "mensagem" }`; o limite de uso responde **429**. Uma sala sem atividade por 24 horas é apagada sozinha.
 
+## Segurança
+
+O servidor é **particular**: só usa quem tem as senhas.
+
+- **Senhas:** criar sala e ver o uso pedem a chave de transmissão; tudo de quem assiste (até o título da sala) pede a senha para assistir. A comparação é feita pelo hash, em tempo constante. O token de cada sala é guardado só como hash.
+- **Limite de tentativas:** **8 senhas erradas** em 10 minutos bloqueiam aquele IP por **15 minutos**, mesmo que depois ele acerte. Pedido sem senha (abrir o link pela primeira vez) não conta. Fica num Durable Object `Tentativas` por IP, que se apaga sozinho quando o bloqueio e a janela acabam.
+- **Buscadores:** `robots.txt` pede para não listar nada, e toda resposta leva `X-Robots-Tag: noindex, nofollow`.
+- **Páginas:** `Content-Security-Policy` só deixa rodar script e estilo do próprio servidor, `frame-ancestors 'none'` e `X-Frame-Options: DENY` impedem embutir as páginas em outro site, e `Referrer-Policy: no-referrer` não deixa o link da sala vazar para sites externos (em `public/_headers` e, para `/s/<sala>`, no Worker).
+- **Segredos** só no servidor (Workers Secrets): o App Secret do Realtime nunca vai para o navegador.
+
+Use senhas fortes (por exemplo, 3 palavras aleatórias) e troque com `npx wrangler secret put` se alguma vazar.
+
 ## Custos e trava de uso
 
 O Cloudflare Realtime tem **1.000 GB grátis por mês** (SFU + TURN somados) e cobra US$ 0,05 por GB acima disso. Só conta o que sai para quem assiste; quem transmite envia de graça. Workers e Durable Objects também cabem no plano grátis para esse uso.
@@ -152,6 +164,8 @@ A contagem depende da página de assistir do próprio servidor. Uma página modi
 | `src/salas.ts` | Regras das salas, IDs, tokens |
 | `src/sfu.ts` | Cliente da API do Realtime SFU |
 | `src/uso.ts` | Trava de uso: estimativa por presença e soma dos últimos 31 dias |
+| `src/tentativas.ts` | Limite de tentativas de senha por IP |
+| `public/_headers`, `public/robots.txt` | Cabeçalhos de segurança e bloqueio de buscadores |
 | `public/js/qualidade.js` | Qualidades de transmissão, usadas pela página e pelo servidor |
 | `public/js/tela.js` | Tela cheia e janela flutuante (páginas de assistir e de transmitir) |
 | `public/js/ponte-app.js` | Modo app: recebe do app do Windows o som só do jogo |

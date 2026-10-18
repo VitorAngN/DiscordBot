@@ -43,6 +43,10 @@ p {
   color: var(--texto-suave);
 }
 
+.link-destaque {
+  color: var(--destaque);
+}
+
 .cabecalho {
   display: flex;
   flex-wrap: wrap;
