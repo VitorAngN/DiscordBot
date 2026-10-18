@@ -431,6 +431,7 @@ describe('aviso no Discord', () => {
       qualidade: '1080p · 60 fps',
       link: `${ORIGEM}/s/${sala}`,
       inicio: 1_000,
+      pedeSenha: false, // os testes rodam sem senha para assistir
     });
     expect(salas.dados.get(sala)?.aviso).toEqual({ mensagemId: 'msg-1', inicio: 1_000 });
   });

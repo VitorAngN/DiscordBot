@@ -16,6 +16,8 @@ export interface Aviso {
   qualidade: string | null;
   link: string;
   inicio: number;
+  /** O servidor pede a senha para assistir (`ASSISTIR_CHAVE`); muda a dica no rodapé. */
+  pedeSenha?: boolean;
 }
 
 export interface AvisoNoDiscord {
@@ -39,7 +41,7 @@ export function mensagemAoVivo(aviso: Aviso) {
         color: COR_AO_VIVO,
         fields: aviso.qualidade ? [{ name: 'Qualidade', value: aviso.qualidade, inline: true }] : [],
         timestamp: new Date(aviso.inicio).toISOString(),
-        footer: { text: 'Clique em Assistir e use a senha para assistir' },
+        footer: { text: aviso.pedeSenha ? 'Clique em Assistir e use a senha para assistir' : 'Clique em Assistir para ver no navegador' },
       },
     ],
     components: [

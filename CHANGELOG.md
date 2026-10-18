@@ -6,6 +6,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Corrigido
+
+- O rodapé do aviso no Discord só fala em senha quando o servidor pede a senha para assistir.
+
 ## [1.0.0] - 2026-10-18
 
 Fase 5: **pronto para os amigos**. Um `Transmissor.exe` só, que avisa quando sai versão nova.

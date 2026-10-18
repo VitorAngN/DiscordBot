@@ -208,6 +208,7 @@ async function confirmarAoVivo({ req, deps, id, sala }: Contexto, origem: string
         qualidade: nomeDaQualidade(sala),
         link: `${origem}/s/${id}`,
         inicio,
+        pedeSenha: Boolean(deps.chaveDeAssistir),
       });
       aoVivo = registrarAviso(aoVivo, { mensagemId, inicio });
       console.log(`Aviso postado no Discord (mensagem ${mensagemId}).`);
