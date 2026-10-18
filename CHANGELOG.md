@@ -9,6 +9,8 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 ### Adicionado
 
 - Guia [Monte o seu próprio servidor](docs/SERVIDOR-PROPRIO.md), com os pré-requisitos e cada passo para quem nunca usou terminal, e a tabela "Por onde começar" no README.
+- Limite de tentativas de senha: 8 senhas erradas em 10 minutos bloqueiam o IP por 15 minutos (chave de transmissão e senha para assistir).
+- Servidor escondido dos buscadores (`robots.txt` e `X-Robots-Tag`) e cabeçalhos de segurança nas páginas: política de conteúdo, proibição de embutir em outros sites e sem vazar o link da sala para sites externos.
 
 ## [0.2.0] - 2026-10-17
 

@@ -43,6 +43,7 @@ Durante a transmissão:
 | O que acontece | O que fazer |
 |---|---|
 | "Chave de transmissão inválida" | Confira a senha de transmitir com quem te passou |
+| "Muitas senhas erradas seguidas" | Por segurança, depois de várias senhas erradas o servidor espera 15 minutos. Confira a senha e tente depois |
 | A página não abre no app | Menu **Servidor…** e confira o endereço; depois **Recarregar** (F5) |
 | Os amigos ouvem a call do Discord | Confira se o **Som** está em "Todo o som do PC, menos o Discord" e se você está transmitindo **pelo app**, não pelo navegador |
 | "O limite grátis de transmissão foi atingido" | A cota grátis do mês acabou. Ela volta sozinha com o tempo |
