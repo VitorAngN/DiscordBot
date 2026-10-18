@@ -1,13 +1,20 @@
 // Rotas /api/*. Recebe as dependências por parâmetro para ser testável fora do runtime dos Workers.
+import type { AvisoNoDiscord } from './discord';
 import {
+  abandonada,
   encerrar,
   gerarIdDeSala,
   gerarToken,
   hashDe,
   marcarAoVivo,
+  MAX_NOME,
   MAX_TITULO,
+  NOME_PADRAO,
+  nomeDaQualidade,
   novaSala,
+  registrarAviso,
   registrarPublicacao,
+  registrarSinal,
   resumoPublico,
   segredosIguais,
   TITULO_PADRAO,
@@ -31,8 +38,13 @@ export interface Dependencias {
   /** Acima disso (em bytes nos últimos 31 dias), ninguém transmite nem assiste. */
   limiteDeUso: number;
   tentativas: ControleDeTentativas;
+  /** `null` quando o servidor não tem o bot e o canal de avisos configurados. */
+  discord: AvisoNoDiscord | null;
   agora?: () => number;
 }
+
+/** Resultado do aviso no Discord ao ficar ao vivo, para a página mostrar. */
+export type SituacaoDoAviso = 'publicado' | 'ja-publicado' | 'desligado' | 'nao-configurado' | 'falhou';
 
 const MENSAGEM_LIMITE =
   'O limite grátis de transmissão foi atingido. Ela volta sozinha quando o uso dos últimos 31 dias baixar.';
@@ -90,8 +102,13 @@ async function rotear(req: Request, deps: Dependencias): Promise<Response> {
   }
 
   if (!ID_DE_SALA.test(id)) throw new ErroHttp(404, 'Sala não encontrada.');
-  const sala = await deps.salas.obter(id);
+  let sala = await deps.salas.obter(id);
   if (!sala) throw new ErroHttp(404, 'Sala não encontrada.');
+  // Quem transmitia sumiu (fechou o app sem encerrar): encerra agora, sem esperar o alarme da sala
+  if (abandonada(sala, agora(deps))) {
+    sala = await finalizarSala(sala, deps.discord, agora(deps));
+    await deps.salas.salvar(id, sala);
+  }
   const ctx = { req, deps, id, sala };
 
   const rota = `${req.method} ${[acao, sessao && ':sessao', subacao].filter(Boolean).join('/')}`;
@@ -104,7 +121,9 @@ async function rotear(req: Request, deps: Dependencias): Promise<Response> {
     case 'POST publicar':
       return publicar(ctx);
     case 'POST ao-vivo':
-      return confirmarAoVivo(ctx);
+      return confirmarAoVivo(ctx, url.origin);
+    case 'POST sinal':
+      return receberSinal(ctx);
     case 'POST assistir':
       return assistir(ctx);
     case 'POST assistir/:sessao/resposta':
@@ -127,8 +146,10 @@ async function criarSala(req: Request, deps: Dependencias, origem: string): Prom
   await exigirChaveDeTransmissao(req, deps);
   await exigirCota(deps);
 
-  const corpo = await lerJson<{ titulo?: unknown; qualidade?: unknown }>(req, true);
-  const titulo = typeof corpo?.titulo === 'string' && corpo.titulo.trim() ? corpo.titulo.trim().slice(0, MAX_TITULO) : TITULO_PADRAO;
+  const corpo = await lerJson<{ titulo?: unknown; qualidade?: unknown; nome?: unknown; avisar?: unknown }>(req, true);
+  const titulo = textoLimitado(corpo?.titulo, MAX_TITULO) ?? TITULO_PADRAO;
+  const nome = textoLimitado(corpo?.nome, MAX_NOME) ?? NOME_PADRAO;
+  const avisar = corpo?.avisar !== false;
   const qualidade = corpo?.qualidade ?? QUALIDADE_PADRAO;
   if (typeof qualidade !== 'string' || !qualidadeValida(qualidade)) {
     throw new ErroHttp(400, 'Qualidade inválida. Use 1080p60, 1080p30, 720p60 ou 720p30.');
@@ -137,7 +158,7 @@ async function criarSala(req: Request, deps: Dependencias, origem: string): Prom
   let id = gerarIdDeSala();
   while (await deps.salas.obter(id)) id = gerarIdDeSala();
   const token = gerarToken();
-  await deps.salas.salvar(id, novaSala(titulo, qualidade, await hashDe(token), agora(deps)));
+  await deps.salas.salvar(id, novaSala(titulo, qualidade, await hashDe(token), agora(deps), { nome, avisar }));
 
   return json({ sala: id, link: `${origem}/s/${id}`, token }, 201);
 }
@@ -160,11 +181,46 @@ async function publicar({ req, deps, id, sala }: Contexto): Promise<Response> {
   return json({ sessionDescription: resposta });
 }
 
-async function confirmarAoVivo({ req, deps, id, sala }: Contexto): Promise<Response> {
+/**
+ * A conexão de quem transmite subiu: a sala fica ao vivo e, na primeira vez, o bot posta o aviso
+ * no Discord. Se o Discord falhar, a transmissão segue; a resposta só conta o que houve com o aviso.
+ */
+async function confirmarAoVivo({ req, deps, id, sala }: Contexto, origem: string): Promise<Response> {
   await exigirTransmissor(req, sala);
   if (sala.estado === 'encerrada') throw new ErroHttp(410, 'Esta sala já foi encerrada.');
   if (!sala.publicacao) throw new ErroHttp(409, 'Publique as faixas antes de ficar ao vivo.');
-  await deps.salas.salvar(id, marcarAoVivo(sala));
+
+  const inicio = agora(deps);
+  let aoVivo = marcarAoVivo(sala, inicio);
+  let discord: SituacaoDoAviso;
+  if (sala.aviso) discord = 'ja-publicado'; // reconexão de quem transmite: a mensagem já está lá
+  else if (sala.avisar === false) discord = 'desligado';
+  else if (!deps.discord) discord = 'nao-configurado';
+  else {
+    try {
+      const mensagemId = await deps.discord.publicar({
+        nome: sala.nome ?? NOME_PADRAO,
+        titulo: sala.titulo,
+        qualidade: nomeDaQualidade(sala),
+        link: `${origem}/s/${id}`,
+        inicio,
+      });
+      aoVivo = registrarAviso(aoVivo, { mensagemId, inicio });
+      discord = 'publicado';
+    } catch (e) {
+      console.error('Não deu para postar o aviso no Discord:', e);
+      discord = 'falhou';
+    }
+  }
+  await deps.salas.salvar(id, aoVivo);
+  return json({ discord });
+}
+
+/** Sinal de vida de quem transmite (a cada 20 s). Sem ele por 2 minutos, a sala encerra sozinha. */
+async function receberSinal({ req, deps, id, sala }: Contexto): Promise<Response> {
+  await exigirTransmissor(req, sala);
+  if (sala.estado === 'encerrada') throw new ErroHttp(410, 'A transmissão foi encerrada.');
+  await deps.salas.salvar(id, registrarSinal(sala, agora(deps)));
   return semConteudo();
 }
 
@@ -215,11 +271,36 @@ async function consultarUso(req: Request, deps: Dependencias): Promise<Response>
 
 async function encerrarSala({ req, deps, id, sala }: Contexto): Promise<Response> {
   await exigirTransmissor(req, sala);
-  if (sala.estado !== 'encerrada') await deps.salas.salvar(id, encerrar(sala));
+  if (sala.estado !== 'encerrada') await deps.salas.salvar(id, await finalizarSala(sala, deps.discord, agora(deps)));
   return semConteudo();
 }
 
+/**
+ * Encerra a sala e troca o aviso do Discord por "encerrou" (melhor esforço: se o Discord falhar,
+ * a sala encerra do mesmo jeito). Usado ao encerrar, ao achar a sala abandonada e pelo alarme dela.
+ */
+export async function finalizarSala(sala: DadosDaSala, discord: AvisoNoDiscord | null, agora: number): Promise<DadosDaSala> {
+  if (sala.aviso && discord) {
+    try {
+      await discord.encerrar(sala.aviso.mensagemId, {
+        nome: sala.nome ?? NOME_PADRAO,
+        titulo: sala.titulo,
+        qualidade: nomeDaQualidade(sala),
+        inicio: sala.aviso.inicio,
+      }, agora);
+    } catch (e) {
+      console.error('Não deu para atualizar o aviso no Discord:', e);
+    }
+  }
+  return encerrar(sala);
+}
+
 // --- Validações ---
+
+/** Texto não vazio, sem espaços nas pontas e cortado no tamanho máximo; senão `null`. */
+function textoLimitado(valor: unknown, maximo: number): string | null {
+  return typeof valor === 'string' && valor.trim() ? valor.trim().slice(0, maximo) : null;
+}
 
 function tokenDe(req: Request): string | null {
   const cabecalho = req.headers.get('Authorization') ?? '';

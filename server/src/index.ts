@@ -1,6 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
-import { tratarApi } from './api';
-import type { DadosDaSala, RepositorioDeSalas } from './salas';
+import { finalizarSala, tratarApi } from './api';
+import { criarAvisoNoDiscord, type AvisoNoDiscord } from './discord';
+import { abandonada, SEM_SINAL_MS, type DadosDaSala, type RepositorioDeSalas } from './salas';
 import { criarClienteSfu } from './sfu';
 import {
   ESTADO_INICIAL,
@@ -22,12 +23,23 @@ export interface Env {
   TRANSMISSAO_CHAVE?: string;
   ASSISTIR_CHAVE?: string;
   LIMITE_GB_MES?: string;
+  /** Token do bot que posta os avisos (o mesmo do bot/.env) e o canal onde ele posta. */
+  DISCORD_BOT_TOKEN?: string;
+  DISCORD_CANAL_AVISOS?: string;
 }
 
 /** Salas sem atividade por mais tempo que isso são apagadas. */
 const VALIDADE_MS = 24 * 60 * 60 * 1000;
 
-/** Uma instância por sala: guarda os dados dela e se apaga sozinha depois de um dia parada. */
+function avisoNoDiscord(env: Env): AvisoNoDiscord | null {
+  const { DISCORD_BOT_TOKEN: token, DISCORD_CANAL_AVISOS: canal } = env;
+  return token && canal ? criarAvisoNoDiscord(token, canal) : null;
+}
+
+/**
+ * Uma instância por sala. Ao vivo, o alarme confere o sinal de quem transmite: sem sinal por
+ * `SEM_SINAL_MS`, encerra a sala e atualiza o aviso do Discord. Parada, ela se apaga depois de um dia.
+ */
 export class Sala extends DurableObject<Env> {
   async obter(): Promise<DadosDaSala | null> {
     return (await this.ctx.storage.get<DadosDaSala>('sala')) ?? null;
@@ -35,11 +47,21 @@ export class Sala extends DurableObject<Env> {
 
   async salvar(sala: DadosDaSala): Promise<void> {
     await this.ctx.storage.put('sala', sala);
-    await this.ctx.storage.setAlarm(Date.now() + VALIDADE_MS);
+    const proximo = sala.estado === 'ao-vivo' ? Date.now() + SEM_SINAL_MS + 5_000 : Date.now() + VALIDADE_MS;
+    await this.ctx.storage.setAlarm(proximo);
   }
 
   override async alarm(): Promise<void> {
-    await this.ctx.storage.deleteAll();
+    const sala = await this.obter();
+    if (!sala) return;
+    const agora = Date.now();
+    if (abandonada(sala, agora)) {
+      await this.salvar(await finalizarSala(sala, avisoNoDiscord(this.env), agora));
+    } else if (sala.estado === 'ao-vivo') {
+      await this.ctx.storage.setAlarm((sala.ultimoSinal ?? agora) + SEM_SINAL_MS + 5_000);
+    } else {
+      await this.ctx.storage.deleteAll();
+    }
   }
 }
 
@@ -156,6 +178,7 @@ export default {
         uso: medidor(env.USO),
         limiteDeUso: limiteEmBytes(env.LIMITE_GB_MES),
         tentativas: controleDeTentativas(env.TENTATIVAS),
+        discord: avisoNoDiscord(env),
       });
     }
 
