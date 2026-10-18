@@ -7,7 +7,14 @@
     <RootNamespace>Transmissor.App</RootNamespace>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <Description>App do Windows que transmite a janela do jogo com só o som do jogo.</Description>
+    <ApplicationIcon>Icones\transmissor.ico</ApplicationIcon>
+    <!-- Para o atalho de teclado global (LibraryImport) -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Icones\*.ico" LogicalName="Icones.%(Filename)%(Extension)" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />

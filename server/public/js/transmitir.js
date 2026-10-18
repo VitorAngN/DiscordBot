@@ -1,5 +1,6 @@
 import {
   appGuardaChave,
+  contarEstadoAoApp,
   dentroDoApp,
   esquecerChaveNoApp,
   guardarChaveNoApp,
@@ -7,6 +8,7 @@ import {
   lerChaveDoApp,
   pararAudio,
   prepararAudio,
+  quandoOAppPedir,
   trocarSom,
 } from './ponte-app.js';
 import { QUALIDADE_PADRAO, QUALIDADES, TAXA_AUDIO, qualidadeValida, taxaPorEspectador } from './qualidade.js';
@@ -254,6 +256,7 @@ function mostrarAoVivo() {
 function mostrarEspectadores(quantos) {
   const texto = quantos === 0 ? 'Ninguém assistindo ainda' : `${quantos} ${quantos === 1 ? 'pessoa' : 'pessoas'} assistindo`;
   elementos.espectadores.textContent = `👀 ${texto}`;
+  contarEstadoAoApp(true, quantos);
 }
 
 /**
@@ -466,6 +469,7 @@ async function encerrar({ manterStatus = false } = {}) {
   elementos.formulario.hidden = false;
   elementos.iniciar.disabled = false;
   mostrarSelo('parado', 'Parado');
+  contarEstadoAoApp(false);
   if (!manterStatus) mostrarStatus('Transmissão encerrada.');
 }
 
@@ -492,6 +496,16 @@ window.addEventListener('pagehide', () => {
 });
 
 if (dentroDoApp) configurarModoApp();
+quandoOAppPedir((comando) => {
+  if (!atual?.sala) return;
+  if (comando === 'encerrar') {
+    encerrar({ manterStatus: true });
+    mostrarStatus('Transmissão encerrada pelo atalho ou pelo ícone da bandeja.');
+  } else if (comando === 'mostrar-trocar') {
+    elementos.trocar.focus();
+    mostrarStatus('Clique em "Trocar janela" para escolher a nova janela.');
+  }
+});
 montarQualidades();
 elementos.qualidade.addEventListener('change', mostrarDicaDeQualidade);
 

@@ -11,6 +11,9 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - **Quantos estão assistindo**: ao vivo, a tela de transmitir mostra "👀 2 pessoas assistindo", atualizado a cada 20 s.
 - **Chave de transmissão protegida pelo Windows**: o app guarda a chave neste PC com DPAPI (só o seu usuário do Windows abre) depois que ela funciona, e não pede de novo. A que versões antigas guardavam no navegador, sem proteção, passa para o app. Chave errada é esquecida, e trocar de servidor também apaga a chave.
 - **Tela do app mais limpa**: formulário em duas colunas, botão grande para começar e prévia só durante a transmissão, para caber tudo na janela sem rolar.
+- **Ícone na bandeja**: ao vivo, minimizar esconde a janela perto do relógio. O ícone fica vermelho, mostra quantos assistem e tem menu para encerrar ou voltar para trocar a janela.
+- **Atalho Ctrl+Shift+F10**: encerra a transmissão de qualquer programa, inclusive de dentro do jogo.
+- Ícone do app (roxo parado, vermelho ao vivo) e confirmação antes de fechar o app ao vivo.
 
 ### Corrigido
 

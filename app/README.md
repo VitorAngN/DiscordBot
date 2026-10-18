@@ -35,13 +35,21 @@ dotnet run --project app/src/Transmissor.App
 
 Na primeira vez, o app pede o **endereço do seu servidor** (o que apareceu no `npm run deploy`). Depois é só:
 
-1. Digitar a chave de transmissão, o título e a qualidade.
+1. Digitar a chave de transmissão (só na primeira vez: o app guarda, protegida pelo Windows), o título e a qualidade.
 2. Em **Som**, deixar **Todo o som do PC, menos o Discord** (o padrão).
 3. Clicar em **Escolher a janela do jogo** e escolher a janela.
 
 > Para o Discord ficar de fora, transmita **pelo app**. A página aberta num navegador comum só consegue o som de uma aba.
 
 O menu do app tem **Servidor…** (trocar o endereço), **Recarregar** (F5) e **Abrir registro**, um arquivo com o que o app fez. Ele ajuda a entender problemas e fica em `%LocalAppData%\DiscordBot\transmissor.log`.
+
+Ao vivo:
+
+- **Bandeja:** minimizar esconde a janela no ícone perto do relógio, que mostra quantos assistem. Com o botão direito, dá para encerrar ou voltar para trocar a janela.
+- **Atalho:** **Ctrl+Shift+F10** encerra a transmissão de qualquer programa, inclusive com o jogo na frente. Se outro programa já usar essa combinação, o app avisa no registro e o atalho fica desligado.
+- **Fechar o app** pede confirmação, porque encerra a transmissão.
+
+A chave de transmissão fica em `%AppData%\DiscordBot\chave.bin`, protegida com DPAPI: só o seu usuário do Windows consegue abrir. Trocar de servidor apaga a chave.
 
 ## Gerar o `.exe` para os amigos
 
@@ -107,7 +115,8 @@ Ele lista quem tem som aberto e mostra "OK" quando todo o som do Discord fica de
 
 | Pasta | O que é |
 |---|---|
-| `src/Transmissor.App` | O app: janela com WebView2 (`JanelaPrincipal`), ponte de som com a página (`PonteDeAudio`), configuração e janelinhas |
+| `src/Transmissor.App` | O app: janela com WebView2 (`JanelaPrincipal`), ponte de som com a página (`PonteDeAudio`), chave protegida (`CofreDaChave`), bandeja (`Bandeja`), atalho (`AtalhoGlobal`), configuração e janelinhas |
+| `src/Transmissor.App/Icones` | Ícones do app, gerados por `tools/gerar-icones.ps1` |
 | `src/Transmissor.Audio` | Biblioteca de captura: `CapturaDeAudio`, `Processos` (janelas, processos, dono da janela), `PreenchedorDeSilencio` |
 | `src/Transmissor.Audio.Cli` | Ferramenta `captura-audio` |
 | `tests/Transmissor.Audio.Tests` | Testes (xUnit) |

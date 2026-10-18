@@ -37,6 +37,9 @@ Durante a transmissão:
 - **🔄 Trocar janela:** muda o que está sendo transmitido sem derrubar ninguém.
 - **Som:** dá para trocar o modo sem parar.
 - **Encerrar transmissão:** termina para todo mundo e atualiza o aviso do Discord. Se você fechar o app sem encerrar, o servidor encerra sozinho em 2 minutos.
+- **👀 Quantos assistem:** aparece em cima do link e no ícone perto do relógio.
+- **Minimizar:** ao vivo, a janela vai para o **ícone perto do relógio** (roxo parado, vermelho ao vivo), para não atrapalhar o jogo. Clique nele para voltar; com o botão direito, dá para **encerrar** sem sair do jogo.
+- **Ctrl+Shift+F10:** encerra a transmissão de dentro do jogo, sem precisar sair dele.
 
 ### Se algo der errado
 

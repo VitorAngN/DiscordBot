@@ -16,6 +16,9 @@ const recursosDoApp = dentroDoApp ? (globalThis.transmissorApp?.recursos ?? []) 
 /** O app guarda a chave de transmissão protegida pelo Windows. */
 export const appGuardaChave = recursosDoApp.includes('chave');
 
+/** O app tem ícone na bandeja e atalho de encerrar: precisa saber se está ao vivo e manda comandos. */
+export const appTemBandeja = recursosDoApp.includes('bandeja');
+
 const TEMPO_RESPOSTA_MS = 15_000;
 const TEMPO_RESPOSTA_CHAVE_MS = 3_000;
 
@@ -24,6 +27,7 @@ let no = null;
 let esperando = null;
 let esperandoChave = null;
 let aoParar = null;
+let aoComando = null;
 
 webview?.addEventListener('message', (evento) => {
   const mensagem = evento.data;
@@ -46,8 +50,25 @@ webview?.addEventListener('message', (evento) => {
     case 'chave':
       esperandoChave?.(typeof mensagem.chave === 'string' ? mensagem.chave : null);
       break;
+    case 'comando':
+      aoComando?.(mensagem.comando);
+      break;
   }
 });
+
+/** Conta ao app se está ao vivo e quantos assistem, para o ícone da bandeja. */
+export function contarEstadoAoApp(aoVivo, espectadores = 0) {
+  if (appTemBandeja) webview.postMessage({ tipo: 'estado', aoVivo, espectadores });
+}
+
+/**
+ * Comandos da bandeja e do atalho: "encerrar" ou "mostrar-trocar" (escolher outra janela precisa
+ * de um clique na página, então o app só traz a janela para a frente).
+ * @param {(comando: string) => void} acao
+ */
+export function quandoOAppPedir(acao) {
+  aoComando = acao;
+}
 
 /** A chave de transmissão que o app guardou (protegida pelo Windows), ou `null`. */
 export function lerChaveDoApp() {

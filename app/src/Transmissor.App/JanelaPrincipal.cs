@@ -6,24 +6,32 @@ using Microsoft.Web.WebView2.WinForms;
 namespace Transmissor.App;
 
 /// <summary>
-/// Janela do app: mostra a página de transmitir do servidor (WebView2) e atende os pedidos de som dela.
+/// Janela do app: mostra a página de transmitir do servidor (WebView2) e atende os pedidos dela
+/// (som, chave de transmissão). Ao vivo, fica também na bandeja e atende o atalho de encerrar.
 /// </summary>
 internal sealed class JanelaPrincipal : Form
 {
     const string LinkDoWebView2 = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
 
-    /// <summary>O que a página pode pedir a este app. "chave": guardar a chave de transmissão protegida.</summary>
-    static readonly string[] Recursos = ["chave"];
+    /// <summary>
+    /// O que este app sabe fazer, para a página: "chave" guarda a chave de transmissão protegida;
+    /// "bandeja" quer saber se está ao vivo e manda comandos da bandeja e do atalho.
+    /// </summary>
+    static readonly string[] Recursos = ["chave", "bandeja"];
 
     readonly WebView2 navegador = new() { Dock = DockStyle.Fill };
     readonly CofreDaChave cofre = CofreDaChave.Padrao;
     Configuracao configuracao;
     PonteDeAudio? ponte;
+    Bandeja? bandeja;
+    EstadoDaTransmissao estado = EstadoDaTransmissao.Parado;
+    bool avisouDaBandeja;
 
     public JanelaPrincipal(Configuracao configuracao)
     {
         this.configuracao = configuracao;
         Text = "DiscordBot — Transmissor";
+        Icon = Icones.Parado;
         ClientSize = new Size(1100, 820);
         MinimumSize = new Size(640, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -38,8 +46,87 @@ internal sealed class JanelaPrincipal : Form
         MainMenuStrip = menu;
 
         Load += async (_, _) => await IniciarAsync();
-        FormClosing += (_, _) => _ = ponte?.PararAsync();
+        FormClosing += (_, e) =>
+        {
+            var pelaPessoa = e.CloseReason is CloseReason.UserClosing or CloseReason.None;
+            if (estado.AoVivo && pelaPessoa && !ConfirmarSaida())
+            {
+                e.Cancel = true;
+                return;
+            }
+            _ = ponte?.PararAsync();
+        };
+        FormClosed += (_, _) => bandeja?.Dispose();
     }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        var temAtalho = AtalhoGlobal.Registrar(Handle);
+        if (!temAtalho) Registro.Escrever($"Não deu para usar o atalho {AtalhoGlobal.Descricao}: outro programa já usa.");
+        if (bandeja is not null) return;
+
+        bandeja = new Bandeja(temAtalho ? AtalhoGlobal.Descricao : null);
+        bandeja.AbrirPedido += Abrir;
+        bandeja.TrocarPedido += () =>
+        {
+            // Escolher outra janela precisa de um clique na página; o app só leva até o botão
+            Abrir();
+            EnviarComando("mostrar-trocar");
+        };
+        bandeja.EncerrarPedido += () => EncerrarPeloApp("pela bandeja");
+        bandeja.SairPedido += () =>
+        {
+            Abrir();
+            Close();
+        };
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        AtalhoGlobal.Liberar(Handle);
+        base.OnHandleDestroyed(e);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (AtalhoGlobal.EhOAtalho(m)) EncerrarPeloApp($"com o atalho {AtalhoGlobal.Descricao}");
+        base.WndProc(ref m);
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        // Ao vivo, minimizar esconde a janela na bandeja, para ela não atrapalhar o jogo
+        if (WindowState != FormWindowState.Minimized || !estado.AoVivo) return;
+        Hide();
+        if (avisouDaBandeja) return;
+        avisouDaBandeja = true;
+        bandeja?.Avisar("O Transmissor continua aqui", $"Ainda ao vivo. Para encerrar, use {AtalhoGlobal.Descricao} ou o ícone perto do relógio.");
+    }
+
+    void Abrir()
+    {
+        Show();
+        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+        Activate();
+    }
+
+    bool ConfirmarSaida() =>
+        MessageBox.Show(this, "Você está ao vivo. Fechar o Transmissor encerra a transmissão.", Text,
+            MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.OK;
+
+    /// <summary>Encerra a transmissão sem precisar da janela (bandeja ou atalho).</summary>
+    void EncerrarPeloApp(string como)
+    {
+        if (!estado.AoVivo) return;
+        Registro.Escrever($"Transmissão encerrada {como}.");
+        EnviarComando("encerrar");
+        bandeja?.Avisar("Transmissão encerrada", $"Você encerrou {como}.");
+    }
+
+    void EnviarComando(string comando) =>
+        navegador.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(new { tipo = "comando", comando }));
 
     async Task IniciarAsync()
     {
@@ -75,13 +162,13 @@ internal sealed class JanelaPrincipal : Form
 
         core.WebMessageReceived += async (_, e) =>
         {
-            // Só a página do próprio servidor fala com o app (som e chave de transmissão)
+            // Só a página do próprio servidor fala com o app
             if (!DoServidor(e.Source)) return;
             try
             {
                 using var json = JsonDocument.Parse(e.WebMessageAsJson);
                 var mensagem = json.RootElement.Clone();
-                if (!TratarChave(mensagem)) await ponte.TratarAsync(mensagem);
+                if (!TratarDoApp(mensagem)) await ponte.TratarAsync(mensagem);
             }
             catch (JsonException)
             {
@@ -91,7 +178,12 @@ internal sealed class JanelaPrincipal : Form
         // Links para fora do servidor abrem no navegador normal
         core.NavigationStarting += (_, e) =>
         {
-            if (DoServidor(e.Uri)) return;
+            // Recarregar ou trocar de servidor derruba a transmissão da página
+            if (DoServidor(e.Uri))
+            {
+                MostrarEstado(EstadoDaTransmissao.Parado);
+                return;
+            }
             e.Cancel = true;
             AbrirExterno(e.Uri);
         };
@@ -105,8 +197,8 @@ internal sealed class JanelaPrincipal : Form
         Navegar();
     }
 
-    /// <summary>Pedidos da página sobre a chave de transmissão. Devolve <c>false</c> se a mensagem for de outro assunto.</summary>
-    bool TratarChave(JsonElement mensagem)
+    /// <summary>Mensagens sobre a chave e o estado da transmissão. Devolve <c>false</c> se forem de outro assunto (o som).</summary>
+    bool TratarDoApp(JsonElement mensagem)
     {
         if (mensagem.ValueKind != JsonValueKind.Object || !mensagem.TryGetProperty("tipo", out var tipo)) return false;
         switch (tipo.GetString())
@@ -124,9 +216,26 @@ internal sealed class JanelaPrincipal : Form
             case "chave-esquecer":
                 cofre.Esquecer();
                 return true;
+            case "estado":
+                MostrarEstado(LerEstado(mensagem));
+                return true;
             default:
                 return false;
         }
+    }
+
+    void MostrarEstado(EstadoDaTransmissao novo)
+    {
+        estado = novo;
+        Icon = novo.AoVivo ? Icones.AoVivo : Icones.Parado;
+        bandeja?.Mostrar(novo);
+    }
+
+    internal static EstadoDaTransmissao LerEstado(JsonElement mensagem)
+    {
+        var aoVivo = mensagem.TryGetProperty("aoVivo", out var v) && v.ValueKind == JsonValueKind.True;
+        var espectadores = mensagem.TryGetProperty("espectadores", out var n) && n.ValueKind == JsonValueKind.Number && n.TryGetInt32(out var total) ? Math.Max(0, total) : 0;
+        return new EstadoDaTransmissao(aoVivo, espectadores);
     }
 
     void Navegar() => navegador.CoreWebView2?.Navigate($"{configuracao.Servidor}/transmitir");
