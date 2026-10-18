@@ -1,4 +1,14 @@
-import { dentroDoApp, iniciarAudio, pararAudio, prepararAudio, trocarSom } from './ponte-app.js';
+import {
+  appGuardaChave,
+  dentroDoApp,
+  esquecerChaveNoApp,
+  guardarChaveNoApp,
+  iniciarAudio,
+  lerChaveDoApp,
+  pararAudio,
+  prepararAudio,
+  trocarSom,
+} from './ponte-app.js';
 import { QUALIDADE_PADRAO, QUALIDADES, TAXA_AUDIO, qualidadeValida, taxaPorEspectador } from './qualidade.js';
 import { opusEstereo } from './sdp.js';
 import { configurarTela } from './tela.js';
@@ -38,7 +48,11 @@ const $ = (id) => document.getElementById(id);
 const elementos = {
   formulario: $('formulario'),
   chave: $('chave'),
+  campoChave: $('campoChave'),
   lembrar: $('lembrar'),
+  campoLembrar: $('campoLembrar'),
+  chaveSalva: $('chaveSalva'),
+  trocarChave: $('trocarChave'),
   titulo: $('titulo'),
   nome: $('nome'),
   avisar: $('avisar'),
@@ -62,6 +76,8 @@ const elementos = {
   campoSomAoVivo: $('campoSomAoVivo'),
   modoSomAoVivo: $('modoSomAoVivo'),
   dicaNavegador: $('dicaNavegador'),
+  palco: $('palco'),
+  barraDaPrevia: $('barraDaPrevia'),
 };
 
 configurarTela({ palco: $('palco'), video: elementos.previa, telaCheia: $('telaCheia'), flutuante: $('flutuante') });
@@ -74,6 +90,7 @@ let atual = null;
 
 /** Dentro do app, o som vem do app (só o jogo), não do navegador. */
 function configurarModoApp() {
+  document.documentElement.classList.add('no-app');
   document.title = 'Transmitir';
   elementos.tituloPagina.textContent = 'Transmitir';
   elementos.subtitulo.textContent = 'Escolha a janela do jogo. O som vem só desse programa: a call do Discord não entra.';
@@ -82,6 +99,13 @@ function configurarModoApp() {
   elementos.dicaNavegador.hidden = true;
   elementos.iniciar.textContent = 'Escolher a janela do jogo';
   elementos.trocar.textContent = '🔄 Trocar janela';
+  mostrarPrevia(false);
+}
+
+/** No app, a prévia só aparece ao vivo: antes disso seria só um quadro preto ocupando a janela. */
+function mostrarPrevia(visivel) {
+  elementos.palco.hidden = !visivel;
+  elementos.barraDaPrevia.hidden = !visivel;
 }
 
 const emGb = (bytes) => (bytes / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
@@ -115,12 +139,48 @@ function lerChaveSalva() {
 }
 
 function guardarChave(chave) {
+  if (appGuardaChave) return; // o app guarda, protegida, depois que a chave funcionar
   try {
     if (elementos.lembrar.checked) localStorage.setItem(CHAVE_SALVA, chave);
     else localStorage.removeItem(CHAVE_SALVA);
   } catch {
     // Armazenamento bloqueado: só não lembra
   }
+}
+
+/** Com a chave guardada pelo app, o campo some e fica só o aviso de que ela está salva. */
+function mostrarChaveSalva(salva) {
+  elementos.campoChave.hidden = salva;
+  elementos.chave.required = !salva;
+  elementos.chaveSalva.hidden = !salva;
+}
+
+/** Busca a chave que o app guardou. A que versões antigas guardavam no navegador passa para o app. */
+async function carregarChaveDoApp() {
+  elementos.campoLembrar.hidden = true; // o app sempre guarda, protegida pelo Windows
+  let chave = await lerChaveDoApp();
+  const antiga = lerChaveSalva();
+  if (antiga) {
+    if (!chave) {
+      chave = antiga;
+      guardarChaveNoApp(antiga);
+    }
+    try {
+      localStorage.removeItem(CHAVE_SALVA);
+    } catch {
+      // Nada a limpar
+    }
+  }
+  if (chave && !atual) {
+    elementos.chave.value = chave;
+    mostrarChaveSalva(true);
+  }
+}
+
+function esquecerChave() {
+  esquecerChaveNoApp();
+  elementos.chave.value = '';
+  mostrarChaveSalva(false);
 }
 
 function montarQualidades() {
@@ -240,6 +300,7 @@ async function iniciar() {
   const [video] = midia.getVideoTracks();
   let [audio] = midia.getAudioTracks();
   elementos.previa.srcObject = midia;
+  mostrarPrevia(true);
   atual = { sala: null, token: null, pc: null, midia, qualidade, programa: null };
 
   try {
@@ -261,6 +322,10 @@ async function iniciar() {
       token: chave,
       corpo: { titulo, qualidade: idQualidade, nome, avisar },
     });
+    if (appGuardaChave) {
+      guardarChaveNoApp(chave);
+      mostrarChaveSalva(true);
+    }
     const pc = novaConexao();
     Object.assign(atual, { sala, token, pc });
 
@@ -312,6 +377,8 @@ async function iniciar() {
       if (pc.connectionState === 'failed') mostrarStatus('A conexão com o servidor de vídeo caiu. Encerre e comece de novo.', 'erro');
     });
   } catch (erro) {
+    // Chave errada: o app esquece a que tinha guardado e o campo volta
+    if (erro.status === 401 && appGuardaChave) esquecerChave();
     mostrarStatus(`Não deu para transmitir: ${erro.message}`, 'erro');
     await encerrar({ manterStatus: true });
   }
@@ -394,6 +461,7 @@ async function encerrar({ manterStatus = false } = {}) {
     }
   }
   elementos.previa.srcObject = null;
+  if (dentroDoApp) mostrarPrevia(false);
   elementos.aoVivo.hidden = true;
   elementos.formulario.hidden = false;
   elementos.iniciar.disabled = false;
@@ -427,10 +495,18 @@ if (dentroDoApp) configurarModoApp();
 montarQualidades();
 elementos.qualidade.addEventListener('change', mostrarDicaDeQualidade);
 
-const salva = lerChaveSalva();
-if (salva) {
-  elementos.chave.value = salva;
-  elementos.lembrar.checked = true;
+if (appGuardaChave) {
+  carregarChaveDoApp();
+  elementos.trocarChave.addEventListener('click', () => {
+    esquecerChave();
+    elementos.chave.focus();
+  });
+} else {
+  const salva = lerChaveSalva();
+  if (salva) {
+    elementos.chave.value = salva;
+    elementos.lembrar.checked = true;
+  }
 }
 elementos.nome.value = lerSalvo(NOME_SALVO) ?? '';
 elementos.avisar.checked = lerSalvo(AVISAR_SALVO) !== 'nao';

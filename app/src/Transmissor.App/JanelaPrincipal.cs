@@ -12,7 +12,11 @@ internal sealed class JanelaPrincipal : Form
 {
     const string LinkDoWebView2 = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
 
+    /// <summary>O que a página pode pedir a este app. "chave": guardar a chave de transmissão protegida.</summary>
+    static readonly string[] Recursos = ["chave"];
+
     readonly WebView2 navegador = new() { Dock = DockStyle.Fill };
+    readonly CofreDaChave cofre = CofreDaChave.Padrao;
     Configuracao configuracao;
     PonteDeAudio? ponte;
 
@@ -65,14 +69,19 @@ internal sealed class JanelaPrincipal : Form
         core.Settings.IsStatusBarEnabled = false;
         ponte = new PonteDeAudio(this, core);
 
+        // A página descobre por aqui o que este app sabe fazer; apps antigos não dizem nada
+        var apresentacao = JsonSerializer.Serialize(new { versao = Application.ProductVersion.Split('+')[0], recursos = Recursos });
+        await core.AddScriptToExecuteOnDocumentCreatedAsync($"window.transmissorApp = Object.freeze({apresentacao});");
+
         core.WebMessageReceived += async (_, e) =>
         {
-            // Só a página do próprio servidor pode pedir o som
+            // Só a página do próprio servidor fala com o app (som e chave de transmissão)
             if (!DoServidor(e.Source)) return;
             try
             {
                 using var json = JsonDocument.Parse(e.WebMessageAsJson);
-                await ponte.TratarAsync(json.RootElement.Clone());
+                var mensagem = json.RootElement.Clone();
+                if (!TratarChave(mensagem)) await ponte.TratarAsync(mensagem);
             }
             catch (JsonException)
             {
@@ -96,6 +105,30 @@ internal sealed class JanelaPrincipal : Form
         Navegar();
     }
 
+    /// <summary>Pedidos da página sobre a chave de transmissão. Devolve <c>false</c> se a mensagem for de outro assunto.</summary>
+    bool TratarChave(JsonElement mensagem)
+    {
+        if (mensagem.ValueKind != JsonValueKind.Object || !mensagem.TryGetProperty("tipo", out var tipo)) return false;
+        switch (tipo.GetString())
+        {
+            case "chave-ler":
+                navegador.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(new { tipo = "chave", chave = cofre.Ler() }));
+                return true;
+            case "chave-guardar":
+                if (mensagem.TryGetProperty("chave", out var chave) && chave.ValueKind == JsonValueKind.String
+                    && !string.IsNullOrWhiteSpace(chave.GetString()))
+                {
+                    cofre.Guardar(chave.GetString()!);
+                }
+                return true;
+            case "chave-esquecer":
+                cofre.Esquecer();
+                return true;
+            default:
+                return false;
+        }
+    }
+
     void Navegar() => navegador.CoreWebView2?.Navigate($"{configuracao.Servidor}/transmitir");
 
     bool DoServidor(string endereco) =>
@@ -106,6 +139,8 @@ internal sealed class JanelaPrincipal : Form
     {
         var novo = Dialogos.PedirServidor(this, configuracao.Servidor);
         if (novo is null) return;
+        // A chave guardada é a do servidor antigo
+        if (!string.Equals(novo, configuracao.Servidor, StringComparison.OrdinalIgnoreCase)) cofre.Esquecer();
         configuracao = configuracao with { Servidor = novo };
         configuracao.Salvar();
         _ = ponte?.PararAsync();

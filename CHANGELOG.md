@@ -9,6 +9,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 ### Adicionado
 
 - **Quantos estão assistindo**: ao vivo, a tela de transmitir mostra "👀 2 pessoas assistindo", atualizado a cada 20 s.
+- **Chave de transmissão protegida pelo Windows**: o app guarda a chave neste PC com DPAPI (só o seu usuário do Windows abre) depois que ela funciona, e não pede de novo. A que versões antigas guardavam no navegador, sem proteção, passa para o app. Chave errada é esquecida, e trocar de servidor também apaga a chave.
+- **Tela do app mais limpa**: formulário em duas colunas, botão grande para começar e prévia só durante a transmissão, para caber tudo na janela sem rolar.
+
+### Corrigido
+
+- O campo "Som" e o seletor de som ao vivo apareciam na página de transmitir pelo navegador, onde não valem.
 
 ## [0.3.0] - 2026-10-18
 
