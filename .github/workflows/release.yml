@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Tag da Release que vai receber o Transmissor.exe (ex.: v0.2.0)
+        description: "Tag da Release que vai receber o Transmissor.exe (ex.: v0.2.0)"
         required: true
 
 permissions:
