@@ -121,11 +121,11 @@ Usada pela página de transmitir e, na parte 2c, pelo app do Windows.
 | `GET /api/salas/:sala` | Senha para assistir | Título, estado (`aguardando`, `ao-vivo`, `encerrada`) e número da publicação |
 | `POST /api/salas/:sala/publicar` | Token | Recebe a oferta WebRTC e as faixas; devolve a resposta do SFU |
 | `POST /api/salas/:sala/ao-vivo` | Token | Confirma que a conexão subiu; a sala passa a aparecer como ao vivo e o bot posta o aviso. Devolve `discord`: `publicado`, `ja-publicado`, `desligado`, `nao-configurado` ou `falhou` |
-| `POST /api/salas/:sala/sinal` | Token | Sinal de vida de quem transmite (a cada 20 s); `410` se a sala já encerrou |
+| `POST /api/salas/:sala/sinal` | Token | Sinal de vida de quem transmite (a cada 20 s); responde quantos estão assistindo (`espectadores`), ou `410` se a sala já encerrou |
 | `DELETE /api/salas/:sala` | Token | Encerra a sala |
 | `POST /api/salas/:sala/assistir` | Senha para assistir | Cria a sessão de quem assiste; devolve a oferta do SFU |
 | `POST /api/salas/:sala/assistir/:sessao/resposta` | Senha para assistir | Envia a resposta WebRTC de quem assiste |
-| `POST /api/salas/:sala/assistir/:sessao/presenca` | Senha para assistir | "Continuo assistindo"; responde se pode continuar (`continuar`, `motivo`) |
+| `POST /api/salas/:sala/assistir/:sessao/presenca` | Senha para assistir | "Continuo assistindo" (a cada 15 s); responde se pode continuar (`continuar`, `motivo`). Quem fica 40 s sem mandar deixa de contar como espectador |
 
 As senhas e tokens vão no cabeçalho `Authorization: Bearer ...`. Sem a senha para assistir configurada, as rotas de quem assiste ficam abertas para quem tem o link. Os erros vêm como `{ "erro": "mensagem" }`; o limite de uso e o bloqueio por senhas erradas respondem **429**. Uma sala ao vivo sem sinal por 2 minutos é encerrada; uma sala parada por 24 horas é apagada.
 

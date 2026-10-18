@@ -52,6 +52,7 @@ const elementos = {
   selo: $('selo'),
   previa: $('previa'),
   uso: $('uso'),
+  espectadores: $('espectadores'),
   qualidade: $('qualidade'),
   dicaQualidade: $('dicaQualidade'),
   tituloPagina: $('tituloPagina'),
@@ -189,11 +190,21 @@ function mostrarAoVivo() {
   mostrarStatus(aviso ? `${texto} ${aviso}` : texto);
 }
 
-/** Manda o sinal de vida; se o servidor já tiver encerrado a sala, encerra aqui também. */
+/** "Ninguém assistindo ainda", "1 pessoa assistindo", "3 pessoas assistindo". */
+function mostrarEspectadores(quantos) {
+  const texto = quantos === 0 ? 'Ninguém assistindo ainda' : `${quantos} ${quantos === 1 ? 'pessoa' : 'pessoas'} assistindo`;
+  elementos.espectadores.textContent = `👀 ${texto}`;
+}
+
+/**
+ * Manda o sinal de vida e, com a resposta, atualiza quantos estão assistindo. Se o servidor já
+ * tiver encerrado a sala, encerra aqui também.
+ */
 function vigiarSinal(sala, token) {
   return setInterval(async () => {
     try {
-      await api(`/api/salas/${sala}/sinal`, { metodo: 'POST', token });
+      const resposta = await api(`/api/salas/${sala}/sinal`, { metodo: 'POST', token });
+      if (atual?.sala === sala && Number.isInteger(resposta?.espectadores)) mostrarEspectadores(resposta.espectadores);
     } catch (erro) {
       if (erro.status === 410 && atual?.sala === sala) {
         mostrarStatus('O servidor encerrou a transmissão: ficou mais de 2 minutos sem sinal deste PC.', 'erro');
@@ -288,6 +299,7 @@ async function iniciar() {
     atual.relogioDeSinal = vigiarSinal(sala, token);
 
     elementos.link.textContent = link;
+    mostrarEspectadores(0);
     atualizarUso(chave);
     atual.relogioDeUso = setInterval(() => atualizarUso(chave), 60_000);
     elementos.aoVivo.hidden = false;

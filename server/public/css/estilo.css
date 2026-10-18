@@ -164,6 +164,12 @@ button.secundario:hover:not(:disabled) {
   margin-bottom: 16px;
 }
 
+.espectadores {
+  margin-top: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
 label {
   display: block;
   margin: 0 0 12px;

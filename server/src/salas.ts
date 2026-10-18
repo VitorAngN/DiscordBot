@@ -42,6 +42,33 @@ export interface DadosDaSala {
 export interface RepositorioDeSalas {
   obter(id: string): Promise<DadosDaSala | null>;
   salvar(id: string, sala: DadosDaSala): Promise<void>;
+  /**
+   * Guarda que a sessão está assistindo. Fica fora de `DadosDaSala` de propósito: a presença de quem
+   * assiste chega o tempo todo e não pode sobrescrever a sala (por exemplo, desfazer um "encerrar").
+   */
+  marcarEspectador(id: string, sessao: string, agora: number): Promise<void>;
+  /** Quantas sessões assistiram a sala nos últimos `ESPECTADOR_SUMIU_MS`. */
+  contarEspectadores(id: string, agora: number): Promise<number>;
+}
+
+/** Última presença de cada sessão de quem assiste. */
+export type Espectadores = Record<string, number>;
+
+/** Quem assiste manda presença a cada 15 s; sem presença por mais que isso, deixa de contar. */
+export const ESPECTADOR_SUMIU_MS = 40_000;
+/** Teto de sessões guardadas por sala, para sessões inventadas não encherem o armazenamento. */
+export const MAX_ESPECTADORES = 100;
+
+export function marcarEspectador(lista: Espectadores, sessao: string, agora: number): Espectadores {
+  const outros = Object.entries(lista)
+    .filter(([s, visto]) => s !== sessao && agora - visto < ESPECTADOR_SUMIU_MS)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, MAX_ESPECTADORES - 1);
+  return Object.fromEntries([[sessao, agora], ...outros]);
+}
+
+export function contarEspectadores(lista: Espectadores, agora: number): number {
+  return Object.values(lista).filter((visto) => agora - visto < ESPECTADOR_SUMIU_MS).length;
 }
 
 export const TITULO_PADRAO = 'Transmissão';

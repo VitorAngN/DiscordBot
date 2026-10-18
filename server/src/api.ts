@@ -222,11 +222,12 @@ async function confirmarAoVivo({ req, deps, id, sala }: Contexto, origem: string
 }
 
 /** Sinal de vida de quem transmite (a cada 20 s). Sem ele por 2 minutos, a sala encerra sozinha. */
+/** Sinal de vida de quem transmite; a resposta diz quantos estão assistindo agora. */
 async function receberSinal({ req, deps, id, sala }: Contexto): Promise<Response> {
   await exigirTransmissor(req, sala);
   if (sala.estado === 'encerrada') throw new ErroHttp(410, 'A transmissão foi encerrada.');
   await deps.salas.salvar(id, registrarSinal(sala, agora(deps)));
-  return semConteudo();
+  return json({ espectadores: await deps.salas.contarEspectadores(id, agora(deps)) });
 }
 
 async function assistir({ req, deps, sala }: Contexto): Promise<Response> {
@@ -252,10 +253,10 @@ async function responder({ req, deps }: Contexto, sessao: string): Promise<Respo
 }
 
 /**
- * Quem assiste avisa periodicamente que continua conectado; é isso que alimenta a trava de uso.
- * A resposta diz se pode continuar e, se não, por quê.
+ * Quem assiste avisa periodicamente que continua conectado; é isso que alimenta a trava de uso e a
+ * contagem de quem assiste. A resposta diz se pode continuar e, se não, por quê.
  */
-async function registrarPresenca({ req, deps, sala }: Contexto, sessao: string): Promise<Response> {
+async function registrarPresenca({ req, deps, id, sala }: Contexto, sessao: string): Promise<Response> {
   await exigirEspectador(req, deps);
   if (!ID_DE_SESSAO.test(sessao)) throw new ErroHttp(400, 'Sessão inválida.');
   const total = await deps.uso.presenca(sessao);
@@ -264,6 +265,7 @@ async function registrarPresenca({ req, deps, sala }: Contexto, sessao: string):
   if (sala.estado === 'encerrada') motivo = 'encerrada';
   else if (total >= deps.limiteDeUso) motivo = 'limite';
   else if (sala.estado !== 'ao-vivo') motivo = 'aguardando';
+  if (motivo === null) await deps.salas.marcarEspectador(id, sessao, agora(deps));
 
   return json({ continuar: motivo === null, motivo, publicacao: resumoPublico(sala).publicacao });
 }

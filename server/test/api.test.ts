@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tratarApi, type Dependencias } from '../src/api';
 import type { Aviso, AvisoNoDiscord } from '../src/discord';
-import { SEM_SINAL_MS, type DadosDaSala, type RepositorioDeSalas } from '../src/salas';
+import {
+  contarEspectadores,
+  ESPECTADOR_SUMIU_MS,
+  marcarEspectador,
+  MAX_ESPECTADORES,
+  SEM_SINAL_MS,
+  type DadosDaSala,
+  type Espectadores,
+  type RepositorioDeSalas,
+} from '../src/salas';
 import type { ClienteSfu } from '../src/sfu';
 import {
   ESTADO_INICIAL,
@@ -21,10 +30,14 @@ const RESPOSTA = { type: 'answer' as const, sdp: 'v=0 resposta' };
 
 function repositorioEmMemoria(): RepositorioDeSalas & { dados: Map<string, DadosDaSala> } {
   const dados = new Map<string, DadosDaSala>();
+  const espectadores = new Map<string, Espectadores>();
   return {
     dados,
     obter: async (id) => structuredClone(dados.get(id) ?? null),
     salvar: async (id, sala) => void dados.set(id, structuredClone(sala)),
+    marcarEspectador: async (id, sessao, agora) =>
+      void espectadores.set(id, marcarEspectador(espectadores.get(id) ?? {}, sessao, agora)),
+    contarEspectadores: async (id, agora) => contarEspectadores(espectadores.get(id) ?? {}, agora),
   };
 }
 
@@ -477,7 +490,7 @@ describe('sinal de vida de quem transmite', () => {
     const { sala, token } = await criarSala();
     await colocarAoVivo(sala, token);
 
-    expect((await pedir('POST', `/api/salas/${sala}/sinal`, { token })).status).toBe(204);
+    expect((await pedir('POST', `/api/salas/${sala}/sinal`, { token })).status).toBe(200);
     expect((await pedir('POST', `/api/salas/${sala}/sinal`, { token: 'outro' })).status).toBe(403);
   });
 
@@ -500,6 +513,63 @@ describe('sinal de vida de quem transmite', () => {
     expect((await corpo(await pedir('GET', `/api/salas/${sala}`))).estado).toBe('encerrada');
     expect(discord.encerrar).toHaveBeenCalledTimes(1);
     expect((await pedir('POST', `/api/salas/${sala}/sinal`, { token })).status).toBe(410);
+  });
+});
+
+describe('quantos estão assistindo', () => {
+  const presenca = (sala: string, sessao: string) => pedir('POST', `/api/salas/${sala}/assistir/${sessao}/presenca`);
+  const espectadores = async (sala: string, token: string) =>
+    (await corpo(await pedir('POST', `/api/salas/${sala}/sinal`, { token }))).espectadores;
+
+  it('o sinal de quem transmite responde quantas sessões estão assistindo', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    expect(await espectadores(sala, token)).toBe(0);
+
+    await presenca(sala, 'amigo-1');
+    await presenca(sala, 'amigo-2');
+    await presenca(sala, 'amigo-1'); // a mesma sessão conta uma vez só
+
+    expect(await espectadores(sala, token)).toBe(2);
+  });
+
+  it('quem para de mandar presença deixa de contar', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    await presenca(sala, 'amigo-1');
+    relogio += ESPECTADOR_SUMIU_MS - 10_000;
+    await presenca(sala, 'amigo-2');
+    relogio += 10_000;
+
+    expect(await espectadores(sala, token)).toBe(1);
+  });
+
+  it('presença em sala que ainda não está ao vivo não conta', async () => {
+    const { sala, token } = await criarSala();
+    await presenca(sala, 'amigo-1');
+    await colocarAoVivo(sala, token);
+
+    expect(await espectadores(sala, token)).toBe(0);
+  });
+
+  it('a presença de quem assiste não desfaz o encerramento da sala', async () => {
+    const { sala, token } = await criarSala();
+    await colocarAoVivo(sala, token);
+    await presenca(sala, 'amigo-1');
+    await pedir('DELETE', `/api/salas/${sala}`, { token });
+    await presenca(sala, 'amigo-1');
+
+    expect(salas.dados.get(sala)?.estado).toBe('encerrada');
+  });
+
+  it('guarda no máximo MAX_ESPECTADORES sessões, ficando com as mais recentes', () => {
+    let lista: Espectadores = {};
+    for (let i = 0; i < MAX_ESPECTADORES + 20; i++) lista = marcarEspectador(lista, `s-${i}`, 1_000 + i);
+
+    expect(Object.keys(lista)).toHaveLength(MAX_ESPECTADORES);
+    expect(lista[`s-${MAX_ESPECTADORES + 19}`]).toBeDefined();
+    expect(lista['s-0']).toBeUndefined();
+    expect(contarEspectadores(lista, 1_000 + MAX_ESPECTADORES + 20)).toBe(MAX_ESPECTADORES);
   });
 });
 

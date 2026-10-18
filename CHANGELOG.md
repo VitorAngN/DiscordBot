@@ -6,6 +6,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Quantos estão assistindo**: ao vivo, a tela de transmitir mostra "👀 2 pessoas assistindo", atualizado a cada 20 s.
+
 ## [0.3.0] - 2026-10-18
 
 Fase 3: o bot **avisa no Discord** quando alguém fica ao vivo, e o servidor ficou mais protegido.
