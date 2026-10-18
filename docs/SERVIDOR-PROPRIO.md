@@ -91,7 +91,7 @@ Use senhas fortes, como 3 palavras aleatórias juntas (`cavalo-lanterna-pipoca`)
 
 ### Opcional: o bot avisar no Discord
 
-Se quiser que o seu bot poste no canal `🔴 Fulano está transmitindo`, com o botão **▶ Assistir**, sempre que alguém ficar ao vivo, cadastre mais dois segredos: o **token do bot** (`DISCORD_BOT_TOKEN`) e o **ID do canal** (`DISCORD_CANAL_AVISOS`). O passo a passo, incluindo como copiar o ID do canal, está em [server/README.md](../server/README.md#aviso-no-discord-opcional). Para criar o bot, siga o [guia do bot](../bot/README.md#1-criar-o-seu-bot-uns-5-minutos).
+Se quiser que o seu bot poste no canal `🔴 Fulano está transmitindo`, com o botão **Assistir**, sempre que alguém ficar ao vivo, cadastre mais dois segredos: o **token do bot** (`DISCORD_BOT_TOKEN`) e o **ID do canal** (`DISCORD_CANAL_AVISOS`). O passo a passo, incluindo como copiar o ID do canal, está em [server/README.md](../server/README.md#aviso-no-discord-opcional). Para criar o bot, siga o [guia do bot](../bot/README.md#1-criar-o-seu-bot-uns-5-minutos).
 
 ## 7. Testar
 
