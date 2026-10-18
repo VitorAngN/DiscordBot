@@ -1,6 +1,6 @@
 {
   "name": "discordbot-motor",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Motor do bot do Discord: entra na call e toca mídia.",
   "license": "MIT",

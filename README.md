@@ -2,7 +2,7 @@
 
 Transmita a janela do seu jogo (vídeo + áudio) para os amigos, usando o Discord como ponto de encontro e sem depender de outros aplicativos.
 
-> **Status:** a transmissão do jogo, o aviso no Discord e a interface do app já funcionam (v0.4.0): baixe o [Transmissor.exe](https://github.com/VitorAngN/DiscordBot/releases/latest). Agora vem a Fase 5, o pacote para os amigos. Veja o [plano completo](docs/PLANO.md).
+> **Status:** versão 1.0, pronta para os amigos: baixe o [Transmissor.exe](https://github.com/VitorAngN/DiscordBot/releases/latest). O app avisa sozinho quando sai versão nova. Veja o [plano completo](docs/PLANO.md).
 
 ## Por que existe
 
@@ -41,7 +41,7 @@ Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa pá
 - [x] **Fase 2 (v0.2.0):** transmissão da janela e do som do jogo (sem o Discord) para uma página no navegador
 - [x] **Fase 3 (v0.3.0):** ao ficar ao vivo, o bot posta o aviso com o botão Assistir
 - [x] **Fase 4 (v0.4.0):** interface do app: tela mais limpa, chave protegida pelo Windows, quantos assistem, ícone na bandeja e atalho para encerrar
-- [ ] **Fase 5 (v1.0.0):** pacote para os amigos instalarem
+- [x] **Fase 5 (v1.0.0):** pacote para os amigos: um `.exe` só, que avisa quando sai versão nova
 
 ## Contribuindo
 

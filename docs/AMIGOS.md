@@ -50,4 +50,5 @@ Durante a transmissão:
 | A página não abre no app | Menu **Servidor…** e confira o endereço; depois **Recarregar** (F5) |
 | Os amigos ouvem a call do Discord | Confira se o **Som** está em "Todo o som do PC, menos o Discord" e se você está transmitindo **pelo app**, não pelo navegador |
 | "O limite grátis de transmissão foi atingido" | A cota grátis do mês acabou. Ela volta sozinha com o tempo |
+| Aparece **⬆ Baixar a versão…** no alto do app | Saiu uma versão nova. Clique, baixe o `Transmissor.exe` e troque pelo antigo. A senha salva continua valendo |
 | Outro problema | No app, menu **Abrir registro**, e mande o arquivo para o dono do servidor |

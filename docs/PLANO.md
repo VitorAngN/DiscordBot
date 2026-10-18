@@ -70,7 +70,7 @@ Para quem transmite é **um programa só**. Por dentro, ele tem as partes abaixo
 | 2. **Transmissão** ✅ | v0.2.0 | O app captura a janela e o som só do jogo e transmite para uma página no navegador. |
 | 3. **Integração** ✅ | v0.3.0 | Ao ficar ao vivo, o servidor usa o seu bot para postar no Discord o aviso com o botão Assistir, e o atualiza quando a transmissão acaba (o bot não precisa estar ligado). |
 | 4. **Interface** ✅ | v0.4.0 | Tela mais limpa, chave de transmissão guardada no PC (protegida pelo Windows/DPAPI), quantos estão assistindo, ícone na bandeja e atalho para encerrar de dentro do jogo. A música continua no bot da Fase 1. |
-| 5. **Pacote** | v1.0.0 | Zip para os amigos e um guia de 5 minutos para criar o próprio bot. |
+| 5. **Pacote** ✅ | v1.0.0 | O `Transmissor.exe` (um arquivo só, sem instalar) avisa quando sai versão nova e mostra a versão no título. Com o [guia para os amigos](AMIGOS.md) e o [guia do servidor próprio](SERVIDOR-PROPRIO.md), ninguém precisa criar bot: o aviso no Discord sai do servidor. |
 
 A Fase 2 é dividida em partes, cada uma num PR:
 
