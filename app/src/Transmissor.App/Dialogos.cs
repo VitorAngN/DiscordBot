@@ -8,12 +8,13 @@ internal static class Dialogos
     /// <summary>Pede o endereço do servidor. Devolve o endereço normalizado, ou <c>null</c> se cancelar.</summary>
     public static string? PedirServidor(IWin32Window? dono, string? atual)
     {
-        using var janela = NovaJanela("Servidor de transmissão", 560, 190);
+        using var janela = NovaJanela("Servidor de transmissão", 560, 200);
         var texto = new Label
         {
-            Text = "Endereço do seu servidor de transmissão (o que apareceu no \"npm run deploy\"):",
+            Text = "Cole o endereço do servidor de transmissão. Se alguém te mandou o app, peça o endereço para essa pessoa " +
+                   "(é algo como https://discordbot-transmissao.nome.workers.dev):",
             Dock = DockStyle.Top,
-            Height = 40,
+            Height = 52,
         };
         var campo = new TextBox { Text = atual ?? "https://", Dock = DockStyle.Top };
         var botoes = Botoes(janela, "Salvar");

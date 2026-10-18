@@ -55,7 +55,8 @@ Como a `main` só recebe mudanças por PR, a preparação da versão entra no PR
 2. Atualize as versões: bot e servidor (`npm --prefix bot version X.Y.Z --no-git-tag-version`, idem com `server`) e app (`<Version>` em `app/Directory.Build.props`).
 3. Faça o commit `chore(release): vX.Y.Z` e, com o CI verde, o merge do PR.
 4. Na `main` atualizada, crie e envie a tag anotada: `git tag -a vX.Y.Z -m "vX.Y.Z"` e `git push origin vX.Y.Z`.
-5. Publique a Release a partir da tag, com a seção do changelog: `gh release create vX.Y.Z --notes-file notas.md`.
+5. Publique a Release a partir da tag, com a seção do changelog: `gh release create vX.Y.Z --notes-file notas.md`. O workflow `release.yml` monta o `Transmissor.exe` e anexa na Release sozinho.
+6. Publique o servidor: `npm --prefix server run deploy`.
 
 ## Segredos
 

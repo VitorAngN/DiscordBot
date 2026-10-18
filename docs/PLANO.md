@@ -67,7 +67,7 @@ Para quem transmite é **um programa só**. Por dentro, ele tem as partes abaixo
 | Fase | Versão | Entrega |
 |---|---|---|
 | 1. **Bot de som** ✅ | v0.1.0 | Bot entra na call e toca arquivos, com painel de botões. Valida o DAVE. |
-| 2. **Transmissão** | v0.2.0 | O app captura a janela e o som só do jogo e transmite para uma página no navegador. |
+| 2. **Transmissão** ✅ | v0.2.0 | O app captura a janela e o som só do jogo e transmite para uma página no navegador. |
 | 3. **Integração** | v0.3.0 | O botão Transmitir cria a sala e o bot posta o link com o botão Assistir; o bot passa a rodar dentro do app. |
 | 4. **Interface** | v0.4.0 | Layout simples, token salvo no PC (protegido pelo Windows/DPAPI), escolha de qualidade, música pelo app. |
 | 5. **Pacote** | v1.0.0 | Zip para os amigos e um guia de 5 minutos para criar o próprio bot. |

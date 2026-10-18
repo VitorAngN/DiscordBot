@@ -22,7 +22,7 @@ Para descobrir o dono da janela, o app usa o rótulo que o motor do Chromium dá
 ## Requisitos
 
 - Windows 10 versão 2004 ou mais novo (Windows 11 recomendado)
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (por enquanto; o pacote pronto para instalar vem na Fase 5)
+- Para usar: nada além do `Transmissor.exe` (veja abaixo). Para compilar: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - O servidor publicado (veja [`server/`](../server/README.md))
 
 ## Usar
@@ -42,6 +42,16 @@ Na primeira vez, o app pede o **endereço do seu servidor** (o que apareceu no `
 > Para o Discord ficar de fora, transmita **pelo app**. A página aberta num navegador comum só consegue o som de uma aba.
 
 O menu do app tem **Servidor…** (trocar o endereço), **Recarregar** (F5) e **Abrir registro**, um arquivo com o que o app fez. Ele ajuda a entender problemas e fica em `%LocalAppData%\DiscordBot\transmissor.log`.
+
+## Gerar o `.exe` para os amigos
+
+```bash
+dotnet publish app/src/Transmissor.App -p:PublishProfile=Pacote
+```
+
+Sai um `artefatos/Transmissor.exe` de uns 50 MB, que já leva o .NET dentro: quem recebe só abre, sem instalar nada. Ao publicar uma Release no GitHub, o workflow `release.yml` gera esse mesmo `.exe` e anexa na Release. As instruções para quem recebe estão no [guia para os amigos](../docs/AMIGOS.md).
+
+O `.exe` não tem assinatura digital, então o Windows mostra "O Windows protegeu o computador" na primeira vez (**Mais informações → Executar assim mesmo**).
 
 ## Compilar e testar
 

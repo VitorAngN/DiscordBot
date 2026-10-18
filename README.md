@@ -2,7 +2,7 @@
 
 Transmita a janela do seu jogo (vídeo + áudio) para os amigos, usando o Discord como ponto de encontro e sem depender de outros aplicativos.
 
-> **Status:** em desenvolvimento. A Fase 1 (bot de som) está pronta na v0.1.0; agora vem a Fase 2 (transmissão). Veja o [plano completo](docs/PLANO.md).
+> **Status:** a transmissão do jogo já funciona (v0.2.0): baixe o [Transmissor.exe](https://github.com/VitorAngN/DiscordBot/releases/latest). Agora vem a Fase 3, em que o bot posta o link no Discord sozinho. Veja o [plano completo](docs/PLANO.md).
 
 ## Por que existe
 
@@ -18,6 +18,13 @@ Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa pá
 
 Só o som do jogo é capturado, então a voz da call não volta para a transmissão.
 
+## Para os amigos
+
+- **Assistir:** basta abrir o link e digitar a senha para assistir.
+- **Transmitir:** baixe o `Transmissor.exe` na [página de downloads](https://github.com/VitorAngN/DiscordBot/releases/latest). É um arquivo só, sem instalação. Peça ao dono do servidor o endereço e a senha de transmitir.
+
+O passo a passo está no [guia para os amigos](docs/AMIGOS.md).
+
 ## Estrutura
 
 | Pasta | O que é | Estado |
@@ -30,7 +37,7 @@ Só o som do jogo é capturado, então a voz da call não volta para a transmiss
 ## Roteiro
 
 - [x] **Fase 1 (v0.1.0):** bot entra na call e toca arquivos de áudio
-- [ ] **Fase 2 (v0.2.0):** transmissão da janela e do som do jogo para uma página no navegador
+- [x] **Fase 2 (v0.2.0):** transmissão da janela e do som do jogo (sem o Discord) para uma página no navegador
 - [ ] **Fase 3 (v0.3.0):** botão Transmitir faz o bot postar o link
 - [ ] **Fase 4 (v0.4.0):** interface final do app
 - [ ] **Fase 5 (v1.0.0):** pacote para os amigos instalarem
