@@ -8,22 +8,24 @@ Transmita a janela do seu jogo (vídeo + áudio) para os amigos, usando o Discor
 
 Desde agosto de 2026, o Go Live, o compartilhamento de tela e as chamadas de vídeo do Discord estão suspensos no Brasil (ordem da ANPD). E bots do Discord só conseguem transmitir áudio.
 
-Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa página aberta no navegador. Dentro do Discord, um bot avisa que a transmissão começou e também toca música na call.
+Por isso o vídeo e o som do jogo vão **juntos, por fora do Discord**, numa página aberta no navegador. Dentro do Discord fica a conversa de sempre, e um bot opcional toca música na call.
 
-## Como vai funcionar
+## Como funciona
 
-1. Você abre o app, escolhe a janela do jogo e clica em **Transmitir**.
-2. Seu bot, que roda escondido dentro do app, posta no canal um aviso com o botão **Assistir**.
-3. Os amigos assistem no navegador, com vídeo e som sincronizados, enquanto conversam no canal de voz.
+1. Você abre o **Transmissor.exe**, escolhe a janela do jogo e começa a transmitir.
+2. O app envia a imagem da janela e o som do PC **sem o Discord**, então a voz da call nunca volta para quem assiste.
+3. Você manda o link no Discord, e os amigos assistem no navegador (celular ou PC) com a senha para assistir, enquanto conversam no canal de voz.
 
-Só o som do jogo é capturado, então a voz da call não volta para a transmissão.
+Na Fase 3, o bot vai postar o link no canal sozinho, com um botão **Assistir**.
 
-## Para os amigos
+## Por onde começar
 
-- **Assistir:** basta abrir o link e digitar a senha para assistir.
-- **Transmitir:** baixe o `Transmissor.exe` na [página de downloads](https://github.com/VitorAngN/DiscordBot/releases/latest). É um arquivo só, sem instalação. Peça ao dono do servidor o endereço e a senha de transmitir.
-
-O passo a passo está no [guia para os amigos](docs/AMIGOS.md).
+| Você quer… | Precisa de | Guia |
+|---|---|---|
+| **Assistir** a transmissão de um amigo | Só o link e a senha para assistir | [Guia para os amigos](docs/AMIGOS.md#só-quero-assistir) |
+| **Transmitir** usando o servidor de um amigo | O [Transmissor.exe](https://github.com/VitorAngN/DiscordBot/releases/latest), o endereço do servidor e a senha de transmitir | [Guia para os amigos](docs/AMIGOS.md#quero-transmitir-o-meu-jogo) |
+| Ter o **próprio servidor**, com as suas senhas e a sua cota grátis | Conta na Cloudflare e o Node.js (uns 20 minutos) | [Monte o seu próprio servidor](docs/SERVIDOR-PROPRIO.md) |
+| Ter o **bot** que toca música na call | Um bot no Discord Developer Portal e o Node.js | [Guia do bot](bot/README.md) |
 
 ## Estrutura
 
@@ -32,7 +34,7 @@ O passo a passo está no [guia para os amigos](docs/AMIGOS.md).
 | [`bot/`](bot/README.md) | Bot do Discord (Node.js + discord.js) | Toca áudio na call |
 | [`app/`](app/README.md) | App transmissor para Windows (C# + WebView2) | Transmite a janela do jogo, só com o som dele |
 | [`server/`](server/README.md) | Servidor de transmissão (Cloudflare Workers) | Salas e página de assistir |
-| `docs/` | Plano e documentação | — |
+| [`docs/`](docs/) | Plano e guias (amigos, servidor próprio) | — |
 
 ## Roteiro
 

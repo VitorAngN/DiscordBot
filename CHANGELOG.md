@@ -6,6 +6,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Adicionado
+
+- Guia [Monte o seu próprio servidor](docs/SERVIDOR-PROPRIO.md), com os pré-requisitos e cada passo para quem nunca usou terminal, e a tabela "Por onde começar" no README.
+
 ## [0.2.0] - 2026-10-17
 
 Fase 2: transmissão do jogo para os amigos, com vídeo e som, **sem a call do Discord**.
