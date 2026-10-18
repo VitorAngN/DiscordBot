@@ -97,6 +97,11 @@ export function duracao(ms: number): string {
 }
 
 export function criarAvisoNoDiscord(token: string, canalId: string, buscar: typeof fetch = fetch): AvisoNoDiscord {
+  // Segredo colado ou mandado pelo terminal pode vir com espaço, quebra de linha ou BOM (U+FEFF),
+  // e o Discord recusa o ID do canal assim. trim() tira os três.
+  token = token.trim();
+  canalId = canalId.trim();
+
   async function chamar(metodo: string, caminho: string, corpo: unknown): Promise<{ id?: string }> {
     const resposta = await buscar(`${API}${caminho}`, {
       method: metodo,

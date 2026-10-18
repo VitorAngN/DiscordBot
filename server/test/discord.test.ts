@@ -42,6 +42,14 @@ describe('aviso no Discord', () => {
     expect(chamada.corpo.components[0].components[0]).toMatchObject({ type: 2, style: 5, label: 'Assistir', url: AVISO.link });
   });
 
+  it('ignora BOM, espaço e quebra de linha que vierem junto do token e do canal', async () => {
+    const { buscar, chamadas } = fetchFalso({ corpo: { id: 'msg-1' } });
+    await criarAvisoNoDiscord(' token-do-bot\n', '﻿123456\r\n', buscar).publicar(AVISO);
+
+    expect(chamadas[0].url).toBe('https://discord.com/api/v10/channels/123456/messages');
+    expect(chamadas[0].cabecalhos.get('Authorization')).toBe('Bot token-do-bot');
+  });
+
   it('nunca marca ninguém, mesmo com @ no nome ou no título', async () => {
     const { buscar, chamadas } = fetchFalso({ corpo: { id: 'msg-1' } });
     await criarAvisoNoDiscord('t', 'c', buscar).publicar({ ...AVISO, nome: '@everyone' });
