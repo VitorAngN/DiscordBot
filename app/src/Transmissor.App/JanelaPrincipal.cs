@@ -24,13 +24,14 @@ internal sealed class JanelaPrincipal : Form
     Configuracao configuracao;
     PonteDeAudio? ponte;
     Bandeja? bandeja;
+    readonly MenuStrip menu;
     EstadoDaTransmissao estado = EstadoDaTransmissao.Parado;
     bool avisouDaBandeja;
 
     public JanelaPrincipal(Configuracao configuracao)
     {
         this.configuracao = configuracao;
-        Text = "DiscordBot — Transmissor";
+        Text = $"DiscordBot — Transmissor {Atualizacao.Atual.ToString(3)}";
         Icon = Icones.Parado;
         ClientSize = new Size(1100, 820);
         MinimumSize = new Size(640, 480);
@@ -40,6 +41,7 @@ internal sealed class JanelaPrincipal : Form
         menu.Items.Add(new ToolStripMenuItem("Servidor…", null, (_, _) => TrocarServidor()));
         menu.Items.Add(new ToolStripMenuItem("Recarregar", null, (_, _) => navegador.CoreWebView2?.Reload()) { ShortcutKeys = Keys.F5 });
         menu.Items.Add(new ToolStripMenuItem("Abrir registro", null, (_, _) => AbrirExterno(Registro.Arquivo)));
+        this.menu = menu;
 
         Controls.Add(navegador);
         Controls.Add(menu);
@@ -193,8 +195,26 @@ internal sealed class JanelaPrincipal : Form
             AbrirExterno(e.Uri);
         };
 
-        Registro.Escrever($"App aberto. Servidor: {configuracao.Servidor}. WebView2 {core.Environment.BrowserVersionString}.");
+        Registro.Escrever($"App aberto (versão {Atualizacao.Atual.ToString(3)}). Servidor: {configuracao.Servidor}. WebView2 {core.Environment.BrowserVersionString}.");
         Navegar();
+        _ = AvisarSeTemVersaoNovaAsync();
+    }
+
+    /// <summary>Se saiu um Transmissor mais novo, mostra no menu e na bandeja. Não baixa nada sozinho.</summary>
+    async Task AvisarSeTemVersaoNovaAsync()
+    {
+        var nova = await Atualizacao.ProcurarAsync();
+        if (nova is null || IsDisposed) return;
+        var texto = $"⬆ Baixar a versão {nova.ToString(3)}";
+        Registro.Escrever($"Versão nova disponível: {nova.ToString(3)}.");
+        menu.Items.Add(new ToolStripMenuItem(texto, null, (_, _) => AbrirExterno(Atualizacao.PaginaDeDownload))
+        {
+            Alignment = ToolStripItemAlignment.Right,
+            ForeColor = Color.FromArgb(0x23, 0xA5, 0x5A),
+            Font = new Font(menu.Font, FontStyle.Bold),
+        });
+        bandeja?.Avisar("Saiu uma versão nova do Transmissor",
+            $"Versão {nova.ToString(3)}. Clique em \"{texto}\", no alto da janela, para baixar e trocar pelo arquivo antigo.");
     }
 
     /// <summary>Mensagens sobre a chave e o estado da transmissão. Devolve <c>false</c> se forem de outro assunto (o som).</summary>

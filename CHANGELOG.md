@@ -6,6 +6,15 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-18
+
+Fase 5: **pronto para os amigos**. Um `Transmissor.exe` só, que avisa quando sai versão nova.
+
+### Adicionado
+
+- **Aviso de versão nova**: ao abrir, o app confere no GitHub a última Release e, se ela for mais nova, mostra **⬆ Baixar a versão X** no alto da janela e um aviso perto do relógio. Ele só lê a página pública da Release: não manda nada sobre quem usa e não baixa nada sozinho.
+- A versão do app aparece no título da janela e no registro.
+
 ## [0.4.0] - 2026-10-18
 
 Fase 4: a **interface do app**. Tela mais limpa, chave protegida pelo Windows, quantos estão assistindo, ícone na bandeja e atalho para encerrar de dentro do jogo.
@@ -65,7 +74,8 @@ Fase 2: transmissão do jogo para os amigos, com vídeo e som, **sem a call do D
 - Painel com botões: escolher arquivo, entrar, pausar/continuar, parar, volume e sair; atualiza sozinho.
 - Testes automáticos (`npm test`) e CI no GitHub Actions (Windows e Linux).
 
-[Unreleased]: https://github.com/VitorAngN/DiscordBot/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/VitorAngN/DiscordBot/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.4.0...v1.0.0
 [0.4.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/VitorAngN/DiscordBot/compare/v0.1.0...v0.2.0

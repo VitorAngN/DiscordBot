@@ -51,6 +51,8 @@ Ao vivo:
 
 A chave de transmissão fica em `%AppData%\DiscordBot\chave.bin`, protegida com DPAPI: só o seu usuário do Windows consegue abrir. Trocar de servidor apaga a chave.
 
+Ao abrir, o app confere a [última Release](https://github.com/VitorAngN/DiscordBot/releases/latest) no GitHub. Se tiver versão nova, aparece **⬆ Baixar a versão X** no alto da janela. Ele só lê a página pública da Release: não manda nada sobre quem usa e não baixa nada sozinho.
+
 ## Gerar o `.exe` para os amigos
 
 ```bash

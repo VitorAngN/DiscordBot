@@ -4,7 +4,7 @@
 
 const API = 'https://discord.com/api/v10';
 // O Discord pede um User-Agent nesse formato para bots
-const AGENTE = 'DiscordBot (https://github.com/VitorAngN/DiscordBot, 0.4.0)';
+const AGENTE = 'DiscordBot (https://github.com/VitorAngN/DiscordBot, 1.0.0)';
 
 const COR_AO_VIVO = 0xf23f43;
 const COR_ENCERRADA = 0x4f545c;
