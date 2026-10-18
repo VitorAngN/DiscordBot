@@ -7,6 +7,8 @@ Worker da Cloudflare que leva o vídeo e o som de quem transmite até os amigos.
 - conversa com o **Cloudflare Realtime SFU**, que recebe o vídeo uma vez e repassa para cada espectador;
 - tem uma **página de teste** (`/transmitir`) para transmitir pelo navegador antes de o app ficar pronto.
 
+> Nunca mexeu com terminal? Siga o [guia "Monte o seu próprio servidor"](../docs/SERVIDOR-PROPRIO.md), com os pré-requisitos e cada passo explicado. Este README é a referência técnica.
+
 O segredo do Realtime fica só no servidor e nunca vai para o navegador. Criar sala exige a **chave de transmissão**. Para assistir, com a **senha para assistir** configurada, só entra quem tem a senha, mesmo que o link vaze. Uma **trava de uso** garante que o servidor fique dentro da cota grátis da Cloudflare.
 
 ## 1. Criar a app do Realtime
