@@ -68,6 +68,17 @@ describe('aviso no Discord', () => {
     );
   });
 
+  it('no "Invalid Form Body", diz qual campo o Discord recusou', async () => {
+    const erros = {
+      components: { 0: { components: { 0: { url: { _errors: [{ code: 'URL_TYPE_INVALID_URL', message: 'Not a well formed URL.' }] } } } } },
+    };
+    const { buscar } = fetchFalso({ status: 400, corpo: { code: 50035, message: 'Invalid Form Body', errors: erros } });
+
+    await expect(criarAvisoNoDiscord('t', 'c', buscar).publicar(AVISO)).rejects.toThrow(
+      'O Discord respondeu 400: Invalid Form Body (components.0.components.0.url: Not a well formed URL.)',
+    );
+  });
+
   it('formata a duração', () => {
     expect(duracao(10_000)).toBe('1 min');
     expect(duracao(45 * 60_000)).toBe('45 min');

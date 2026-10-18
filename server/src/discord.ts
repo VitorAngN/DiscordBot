@@ -45,7 +45,8 @@ export function mensagemAoVivo(aviso: Aviso) {
     components: [
       {
         type: 1, // linha de componentes
-        components: [{ type: 2, style: 5, label: 'Assistir', emoji: { name: '▶️' }, url: aviso.link }], // botão de link
+        // Botão de link, só com texto: emoji em botão passa por uma validação a mais do Discord
+        components: [{ type: 2, style: 5, label: 'Assistir', url: aviso.link }],
       },
     ],
     allowed_mentions: SEM_MENCOES,
@@ -68,6 +69,26 @@ export function mensagemEncerrada(aviso: Omit<Aviso, 'link'>, fim: number) {
   };
 }
 
+/**
+ * Em "Invalid Form Body", o Discord diz qual campo deu erro num objeto aninhado que termina em
+ * `_errors`. Vira algo legível: "components.0.components.0.url: Not a well formed URL.".
+ * https://discord.com/developers/docs/reference#error-messages
+ */
+export function camposComErro(erros: unknown, caminho: string[] = []): string {
+  if (!erros || typeof erros !== 'object') return '';
+  const partes: string[] = [];
+  for (const [chave, valor] of Object.entries(erros)) {
+    if (chave === '_errors' && Array.isArray(valor)) {
+      const mensagens = valor.map((e: { message?: string; code?: string }) => e.message ?? e.code).join('; ');
+      partes.push(`${caminho.join('.') || 'corpo'}: ${mensagens}`);
+    } else {
+      const dentro = camposComErro(valor, [...caminho, chave]);
+      if (dentro) partes.push(dentro);
+    }
+  }
+  return partes.join(' | ');
+}
+
 /** "45 min", "1 h 05 min". */
 export function duracao(ms: number): string {
   const minutos = Math.max(1, Math.round(ms / 60_000));
@@ -82,9 +103,12 @@ export function criarAvisoNoDiscord(token: string, canalId: string, buscar: type
       headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json', 'User-Agent': AGENTE },
       body: JSON.stringify(corpo),
     });
-    const dados = (await resposta.json().catch(() => ({}))) as { id?: string; message?: string; code?: number };
+    const dados = (await resposta.json().catch(() => ({}))) as { id?: string; message?: string; errors?: unknown };
     if (!resposta.ok) {
-      throw new ErroDiscord(`O Discord respondeu ${resposta.status}: ${dados.message ?? 'erro desconhecido'}`);
+      const detalhes = camposComErro(dados.errors);
+      throw new ErroDiscord(
+        `O Discord respondeu ${resposta.status}: ${dados.message ?? 'erro desconhecido'}${detalhes ? ` (${detalhes})` : ''}`,
+      );
     }
     return dados;
   }
