@@ -13,6 +13,7 @@ const INTERVALO_DE_SINAL_MS = 20_000;
 
 const TEXTO_DO_AVISO = {
   publicado: 'Aviso postado no Discord.',
+  desligado: 'Aviso no Discord desligado: mande o link você mesmo.',
   'nao-configurado': 'O servidor não tem o bot configurado para avisar no Discord: mande o link você mesmo.',
   falhou: 'Não deu para postar o aviso no Discord: mande o link você mesmo.',
 };

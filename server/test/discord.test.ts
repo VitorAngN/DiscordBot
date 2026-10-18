@@ -42,6 +42,14 @@ describe('aviso no Discord', () => {
     expect(chamada.corpo.components[0].components[0]).toMatchObject({ type: 2, style: 5, label: 'Assistir', url: AVISO.link });
   });
 
+  it('ignora BOM, espaço e quebra de linha que vierem junto do token e do canal', async () => {
+    const { buscar, chamadas } = fetchFalso({ corpo: { id: 'msg-1' } });
+    await criarAvisoNoDiscord(' token-do-bot\n', '﻿123456\r\n', buscar).publicar(AVISO);
+
+    expect(chamadas[0].url).toBe('https://discord.com/api/v10/channels/123456/messages');
+    expect(chamadas[0].cabecalhos.get('Authorization')).toBe('Bot token-do-bot');
+  });
+
   it('nunca marca ninguém, mesmo com @ no nome ou no título', async () => {
     const { buscar, chamadas } = fetchFalso({ corpo: { id: 'msg-1' } });
     await criarAvisoNoDiscord('t', 'c', buscar).publicar({ ...AVISO, nome: '@everyone' });
@@ -65,6 +73,17 @@ describe('aviso no Discord', () => {
 
     await expect(criarAvisoNoDiscord('t', 'c', buscar).publicar(AVISO)).rejects.toThrow(
       new ErroDiscord('O Discord respondeu 403: Missing Permissions'),
+    );
+  });
+
+  it('no "Invalid Form Body", diz qual campo o Discord recusou', async () => {
+    const erros = {
+      components: { 0: { components: { 0: { url: { _errors: [{ code: 'URL_TYPE_INVALID_URL', message: 'Not a well formed URL.' }] } } } } },
+    };
+    const { buscar } = fetchFalso({ status: 400, corpo: { code: 50035, message: 'Invalid Form Body', errors: erros } });
+
+    await expect(criarAvisoNoDiscord('t', 'c', buscar).publicar(AVISO)).rejects.toThrow(
+      'O Discord respondeu 400: Invalid Form Body (components.0.components.0.url: Not a well formed URL.)',
     );
   });
 
